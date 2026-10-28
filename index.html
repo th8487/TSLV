@@ -1,0 +1,1197 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>TSLV</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" type="image/png" href="icon-192.png">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="TSLV">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="theme-color" content="#F0F1EC" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#0F1013" media="(prefers-color-scheme: dark)">
+<style>
+:root{color-scheme:light;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+body{margin:0;font-family:system-ui,-apple-system,sans-serif;font-size:14px;-webkit-text-size-adjust:100%}
+img{max-width:100%}
+[hidden]{display:none!important}
+</style>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&family=Zen+Kaku+Gothic+New:wght@400;500;700&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: 片手操作のモバイル優先。上に共通のプロジェクトボタンと大きなタブ名、下に入力欄とタブバーを固定。箱ごとに色を変えて今どこに書いているか一目で分かるように */
+:root{
+  --bg:#F0F1EC; --surface:#FFFFFF; --surface-2:#E6E8E1; --ink:#14161B; --muted:#686C74; --line:#D8DAD2;
+  --task:#2F43E8; --log:#B86E05; --stock:#0A8574; --vision:#8239CC;
+  --danger:#CF3326; --ok:#1F8A4C;
+  --accent:var(--task);
+  --f-display:"Bricolage Grotesque","Zen Kaku Gothic New",system-ui,sans-serif;
+  --f-body:"Zen Kaku Gothic New","Hiragino Sans","Noto Sans JP",system-ui,sans-serif;
+  --f-mono:"IBM Plex Mono",ui-monospace,Menlo,monospace;
+  --r:10px;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#0F1013; --surface:#191B20; --surface-2:#22252B; --ink:#ECEDE8; --muted:#8F939C; --line:#2B2E35;
+  --task:#8291FF; --log:#F0A43A; --stock:#3FC8B3; --vision:#BC8DF2; --danger:#FF6E61; --ok:#4FCB84; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0F1013; --surface:#191B20; --surface-2:#22252B; --ink:#ECEDE8; --muted:#8F939C; --line:#2B2E35;
+  --task:#8291FF; --log:#F0A43A; --stock:#3FC8B3; --vision:#BC8DF2; --danger:#FF6E61; --ok:#4FCB84; color-scheme:dark}
+
+*,*::before,*::after{box-sizing:border-box}
+[hidden]{display:none!important}
+html,body{height:100%}
+body{background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:15px;line-height:1.55;-webkit-tap-highlight-color:transparent}
+body[data-box="task"]{--accent:var(--task)} body[data-box="log"]{--accent:var(--log)}
+body[data-box="stock"]{--accent:var(--stock)} body[data-box="vision"]{--accent:var(--vision)}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:10;background:var(--bg)}
+button,input,select,textarea{font:inherit;color:inherit}
+button{cursor:pointer;background:none;border:0;padding:0}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:6px}
+
+.wrap{max-width:720px;margin:0 auto;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:14px 200px}
+
+/* header */
+.topbar{display:flex;align-items:center;justify-content:space-between;gap:10px}
+.date{font-family:var(--f-mono);font-size:12px;color:var(--muted);letter-spacing:.04em}
+.pjbtn{display:inline-flex;align-items:center;gap:8px;padding:8px 14px;border-radius:999px;background:var(--ink);color:var(--bg);font-size:13px;font-weight:700}
+.pjbtn .n{font-family:var(--f-mono);font-weight:500;font-size:12px;opacity:.75}
+.pjbtn[aria-pressed="true"]{background:var(--accent);color:#fff}
+.head{display:flex;align-items:flex-end;justify-content:space-between;gap:12px;margin-top:14px}
+.title{font-family:var(--f-display);font-weight:800;font-size:44px;line-height:1;letter-spacing:-.03em;margin:0;color:var(--accent);display:flex;align-items:baseline;gap:10px;flex-wrap:wrap}
+.title small{font-family:var(--f-body);font-weight:500;font-size:13px;letter-spacing:0;color:var(--muted)}
+.headbtns{display:flex;gap:6px;flex:none}
+.iconbtn{width:36px;height:36px;border-radius:50%;display:grid;place-items:center;color:var(--muted);border:1px solid var(--line);background:var(--surface)}
+.iconbtn svg{width:18px;height:18px}
+.iconbtn[aria-pressed="true"]{color:var(--accent);border-color:var(--accent)}
+.sync{font-family:var(--f-mono);font-size:11px;color:var(--muted);margin-top:6px}
+.sync.warn{color:var(--danger)}
+
+/* views */
+.views{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px;margin-top:16px}
+.view{padding:8px 2px;border-radius:10px;border:1px solid var(--line);background:var(--surface);font-size:12.5px;min-width:0;overflow:hidden;font-weight:500;display:flex;align-items:center;justify-content:center;gap:4px;white-space:nowrap}
+@media (max-width:440px){.view[data-view="pj"] .n{display:none}}
+.view .n{font-family:var(--f-mono);font-size:11px;color:var(--muted)}
+.view[aria-pressed="true"]{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+.view[aria-pressed="true"] .n{color:var(--bg);opacity:.7}
+.view .alert{width:7px;height:7px;border-radius:50%;background:var(--danger)}
+
+.genres{display:flex;gap:6px;flex-wrap:wrap;margin-top:12px}
+.chip{padding:4px 10px;border-radius:6px;font-size:12px;color:var(--muted);background:var(--surface-2)}
+.chip[aria-pressed="true"]{background:color-mix(in srgb,var(--accent) 16%,transparent);color:var(--accent);font-weight:700}
+.chip.add{border:1px dashed var(--line);background:none}
+
+.search{margin-top:12px;width:100%;padding:9px 12px;border-radius:var(--r);border:1px solid var(--line);background:var(--surface)}
+
+/* list */
+.section{margin-top:22px}
+.sh{display:flex;align-items:baseline;justify-content:space-between;gap:8px;margin-bottom:6px}
+.sh h3{margin:0;font-size:11px;font-weight:700;letter-spacing:.12em;color:var(--muted)}
+.sh span{font-family:var(--f-mono);font-size:11px;color:var(--muted)}
+.list{display:flex;flex-direction:column;background:var(--surface);border:1px solid var(--line);border-radius:var(--r);overflow:hidden}
+.row{display:flex;align-items:center;gap:10px;padding:11px 12px;border-top:1px solid var(--line);position:relative}
+.row:first-child{border-top:0}
+.row.overdue{box-shadow:inset 3px 0 0 var(--danger)}
+.check{flex:none;width:22px;height:22px;border-radius:50%;border:1.5px solid var(--muted);display:grid;place-items:center;transition:background .15s,border-color .15s}
+.check svg{width:12px;height:12px;opacity:0;color:var(--bg)}
+.check:hover{border-color:var(--accent)}
+.row.done .check{background:var(--ok);border-color:var(--ok)} .row.done .check svg{opacity:1}
+.row.done .txt{color:var(--muted);text-decoration:line-through}
+.dot{flex:none;width:8px;height:8px;border-radius:2px;background:var(--accent);align-self:flex-start;margin-top:8px}
+.body{flex:1;min-width:0;cursor:pointer}
+.txt{word-break:break-word;white-space:pre-wrap}
+.meta{display:flex;flex-wrap:wrap;gap:4px 10px;margin-top:2px;font-size:12px;color:var(--muted)}
+.meta .bad{color:var(--danger);font-weight:700}
+.meta .person{color:var(--ink);font-weight:500}
+.meta a{color:var(--accent);text-decoration:none;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:220px}
+.tag{font-size:11px;padding:1px 6px;border-radius:4px;background:var(--surface-2)}
+.tag.wait{background:color-mix(in srgb,var(--log) 18%,transparent);color:var(--log);font-weight:700}
+.tag.hold{background:var(--surface-2);color:var(--muted)}
+.due{flex:none;min-width:52px;padding:5px 10px;white-space:nowrap;border-radius:999px;font-size:12px;font-weight:700;border:1px solid var(--line);color:var(--muted);background:var(--bg);font-variant-numeric:tabular-nums}
+.due.on{background:var(--accent);border-color:var(--accent);color:#fff}
+.due.late{background:var(--danger);border-color:var(--danger);color:#fff}
+.due.date{color:var(--ink)}
+.due.wait{background:var(--log);border-color:var(--log);color:#fff}
+.btns{flex:none;display:flex;gap:4px}
+@media (max-width:380px){.btns{flex-direction:column}}
+.mini{width:30px;height:30px;border-radius:8px;display:grid;place-items:center;color:var(--muted);flex:none}
+.mini svg{width:17px;height:17px}
+.mini[aria-pressed="true"]{color:var(--accent)}
+.mini:hover{background:var(--surface-2)}
+.order{display:flex;flex-direction:column;flex:none}
+.order .mini{width:26px;height:18px}
+
+/* 連携タスク group row */
+.grp{cursor:pointer}
+.grp{padding-block:13px}
+.grp .gt{flex:1;min-width:0;font-weight:700;font-size:15px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.grp .gn{flex:none;font-family:var(--f-mono);font-size:12px;color:var(--muted);font-variant-numeric:tabular-nums}
+.grp .chev{flex:none;color:var(--muted)}
+.grp .chev svg{width:18px;height:18px;display:block}
+
+.empty{padding:28px 16px;text-align:center;color:var(--muted);font-size:13px;border:1px dashed var(--line);border-radius:var(--r)}
+.empty b{display:block;color:var(--ink);font-size:14px;margin-bottom:4px}
+
+/* stats */
+.stats{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin-top:18px}
+.stat{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:12px}
+.stat .k{font-size:11px;color:var(--muted);letter-spacing:.08em}
+.stat .v{font-family:var(--f-display);font-weight:800;font-size:32px;line-height:1.1;font-variant-numeric:tabular-nums}
+.stat .s{font-size:11px;color:var(--muted)}
+.bars{display:flex;align-items:flex-end;gap:4px;height:44px;margin-top:10px}
+.bars i{flex:1;background:var(--accent);border-radius:2px 2px 0 0;min-height:2px;opacity:.85}
+.bars i.zero{opacity:.18}
+.barlab{display:flex;gap:4px;font-family:var(--f-mono);font-size:9px;color:var(--muted)}
+.barlab span{flex:1;text-align:center}
+
+/* projects */
+.pj{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:12px;display:flex;flex-direction:column;gap:8px;cursor:pointer;text-align:left;width:100%}
+.pj+.pj{margin-top:8px}
+.pj .top{display:flex;align-items:baseline;justify-content:space-between;gap:10px}
+.pj .name{font-weight:700;font-size:15px;min-width:0}
+.pj .pct{flex:none;font-family:var(--f-display);font-weight:800;font-size:20px;line-height:1;color:var(--accent);font-variant-numeric:tabular-nums}
+.pj .pct small{font-size:11px;font-weight:500;color:var(--muted);margin-left:2px}
+.pj .na{display:flex;align-items:baseline;gap:8px;font-size:13px;min-width:0}
+.pj .na b{flex:none;font-family:var(--f-mono);font-size:10px;letter-spacing:.08em;padding:1px 6px;border-radius:4px;background:color-mix(in srgb,var(--accent) 14%,transparent);color:var(--accent)}
+.pj .na span{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.pj .na.none span{color:var(--muted)}
+.pjhead{margin-top:14px;display:flex;flex-direction:column;gap:8px}
+.pjhead h2{margin:0;font-size:20px;font-weight:700;letter-spacing:-.01em}
+.pjhead .pm{display:flex;justify-content:space-between;font-family:var(--f-mono);font-size:12px;color:var(--muted)}
+.prog{height:4px;border-radius:2px;background:var(--surface-2);overflow:hidden}
+.prog i{display:block;height:100%;background:var(--accent)}
+.pj .pm{display:flex;justify-content:space-between;gap:10px;font-size:12px;color:var(--muted)}
+.pj .pm span:first-child{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0}
+.back{font-size:13px;color:var(--muted);display:inline-flex;gap:4px;align-items:center;margin-top:16px}
+
+/* composer + tabbar */
+.dock{position:fixed;left:0;right:0;bottom:0;z-index:20;background:color-mix(in srgb,var(--bg) 90%,transparent);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);border-top:1px solid var(--line);padding-left:max(12px,env(safe-area-inset-left,0px));padding-right:max(12px,env(safe-area-inset-right,0px));padding-bottom:env(safe-area-inset-bottom,0px)}
+.dock-in{max-width:720px;margin:0 auto}
+.composer{display:flex;flex-direction:column;gap:6px;padding:10px 0 6px}
+.c1,.c2{display:flex;gap:6px}
+.c1{align-items:flex-end}
+.c1 textarea,.c2 input{flex:1;min-width:0;padding:11px 13px;border-radius:12px;border:1px solid var(--line);background:var(--surface);font-size:16px}
+.c1 textarea{border:1.5px solid var(--accent);resize:none;line-height:1.45;max-height:40vh;overflow-y:auto;display:block}
+.c1 button{flex:none;width:48px;height:46px;border-radius:12px;background:var(--accent);color:#fff;display:grid;place-items:center}
+.c1 button svg{width:20px;height:20px}
+.c2 input{padding:8px 12px;font-size:15px}
+.toggle2{flex:none;display:flex;border:1px solid var(--line);border-radius:12px;overflow:hidden;background:var(--surface)}
+.toggle2 button{padding:0 16px;font-size:14px;font-weight:700;color:var(--muted)}
+.toggle2 button[aria-pressed="true"]{background:var(--accent);color:#fff}
+.tabs{display:grid;grid-template-columns:repeat(4,1fr);gap:4px;padding:2px 0 8px}
+.tab{display:flex;flex-direction:column;align-items:center;gap:1px;padding:6px 0;border-radius:10px;color:var(--muted)}
+.tab b{font-family:var(--f-display);font-weight:800;font-size:19px;line-height:1}
+.tab span{font-size:10px;letter-spacing:.04em}
+.tab[data-b="task"]{--c:var(--task)} .tab[data-b="log"]{--c:var(--log)} .tab[data-b="stock"]{--c:var(--stock)} .tab[data-b="vision"]{--c:var(--vision)}
+.tab[aria-selected="true"]{color:var(--c);background:color-mix(in srgb,var(--c) 12%,transparent)}
+
+/* sheet */
+.scrim{position:fixed;inset:0;background:rgb(0 0 0 / .38);z-index:40}
+.sheet{position:fixed;left:0;right:0;bottom:0;z-index:41;background:var(--surface);border-radius:18px 18px 0 0;max-height:88%;overflow-y:auto;padding:18px max(16px,env(safe-area-inset-right,0px)) calc(20px + env(safe-area-inset-bottom,0px)) max(16px,env(safe-area-inset-left,0px));box-shadow:0 -10px 40px rgb(0 0 0 / .18)}
+.sheet-in{max-width:640px;margin:0 auto;display:flex;flex-direction:column;gap:14px}
+.sheet h2{margin:0;font-family:var(--f-display);font-size:22px;letter-spacing:-.02em}
+.sheet h2 em{font-style:normal;font-family:var(--f-body);font-size:13px;font-weight:500;color:var(--muted);display:block;letter-spacing:0}
+.sheet .section{margin-top:4px}
+.sheet .list{background:var(--bg)}
+.field{display:flex;flex-direction:column;gap:5px}
+.field>label,.field>.lab{font-size:11px;font-weight:700;letter-spacing:.1em;color:var(--muted)}
+.field input,.field select,.field textarea{padding:10px 12px;border-radius:10px;border:1px solid var(--line);background:var(--bg);width:100%}
+.field textarea{min-height:76px;resize:vertical}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.grid2>*{min-width:0}
+.seg{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+.seg button{padding:7px 12px;border-radius:8px;background:var(--bg);border:1px solid var(--line);font-size:13px}
+.seg button[aria-pressed="true"]{background:var(--accent);color:#fff;border-color:var(--accent)}
+.seg input[type="date"]{width:auto;flex:1;min-width:140px;padding:6px 10px}
+.seg.boxes button[data-b="task"][aria-pressed="true"]{background:var(--task);border-color:var(--task)}
+.seg.boxes button[data-b="log"][aria-pressed="true"]{background:var(--log);border-color:var(--log)}
+.seg.boxes button[data-b="stock"][aria-pressed="true"]{background:var(--stock);border-color:var(--stock)}
+.seg.boxes button[data-b="vision"][aria-pressed="true"]{background:var(--vision);border-color:var(--vision)}
+.sw{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px 12px;border-radius:10px;background:var(--bg);border:1px solid var(--line)}
+.sw input{width:20px;height:20px;accent-color:var(--accent)}
+.actions{display:flex;gap:8px;flex-wrap:wrap}
+.btn{padding:11px 16px;border-radius:10px;font-weight:700;background:var(--accent);color:#fff}
+.btn.ghost{background:var(--bg);color:var(--ink);border:1px solid var(--line)}
+.btn.danger{background:none;color:var(--danger);border:1px solid color-mix(in srgb,var(--danger) 40%,transparent)}
+.btn.grow{flex:1}
+.gl{display:flex;flex-direction:column;gap:6px}
+.gl .gi{display:flex;align-items:center;gap:8px;padding:8px 10px;background:var(--bg);border-radius:8px;border:1px solid var(--line)}
+.gl .gi{flex-wrap:wrap;touch-action:pan-y}
+.gl .gi.dragging{box-shadow:0 8px 24px rgb(0 0 0 / .18);border-color:var(--accent);position:relative;z-index:2;background:var(--surface)}
+.gl .handle{flex:none;width:28px;height:30px;display:grid;place-items:center;color:var(--muted);cursor:grab;touch-action:none}
+.gl .handle svg{width:16px;height:16px}
+.gl .gdesc-in{flex-basis:100%;margin-left:36px;border:0;border-top:1px dashed var(--line);background:transparent;padding:6px 0 2px;font-size:12px;color:var(--muted)}
+.gl .gdesc-in:focus{outline:none;color:var(--ink);border-top-color:var(--accent)}
+.gdesc{margin:8px 0 0;font-size:12px;color:var(--muted);line-height:1.6}
+.vnote{white-space:pre-wrap;word-break:break-word;font-size:15px;line-height:1.75;padding:14px;border-radius:10px;background:var(--bg);border:1px solid var(--line);min-height:80px}
+.vnote.empty{color:var(--muted);font-size:13px}
+.gl .gi .gname{flex:1;text-align:left;min-width:0;border:0;border-bottom:1px dashed transparent;background:transparent;padding:4px 0;font-size:15px}
+.gl .gi .gname:focus{outline:none;border-bottom-color:var(--accent)}
+.note{font-size:12px;color:var(--muted);line-height:1.6;margin:0}
+.inlineform{display:flex;gap:6px}
+.inlineform input{flex:1;min-width:0;padding:10px 12px;border-radius:10px;border:1px solid var(--line);background:var(--bg);font-size:16px}
+.inlineform .btn{padding:10px 14px}
+
+.toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(190px + env(safe-area-inset-bottom,0px));z-index:50;background:var(--ink);color:var(--bg);padding:10px 14px;border-radius:10px;font-size:13px;display:flex;gap:14px;align-items:center;box-shadow:0 8px 24px rgb(0 0 0 / .2);max-width:calc(100% - 32px)}
+.toast button{color:var(--bg);font-weight:700;text-decoration:underline}
+
+@media (min-width:720px){.title{font-size:56px}}
+@media (pointer:coarse){input,textarea,select{font-size:16px!important}}
+body{overscroll-behavior-y:none}
+/* login */
+.login{position:fixed;inset:0;z-index:60;background:var(--bg);display:grid;place-items:center;padding:24px max(20px,env(safe-area-inset-right,0px)) 24px max(20px,env(safe-area-inset-left,0px))}
+.login-in{width:100%;max-width:360px;display:flex;flex-direction:column;gap:14px}
+.login .logo{display:grid;grid-template-columns:repeat(2,44px);gap:6px;margin-bottom:6px}
+.login .logo b{display:grid;place-items:center;height:44px;border-radius:10px;color:#fff;font-family:var(--f-display);font-weight:800;font-size:22px}
+.login h1{margin:0;font-family:var(--f-display);font-weight:800;font-size:34px;letter-spacing:-.03em}
+.login .err{color:var(--danger);font-size:13px;min-height:1.4em;margin:0}
+.login .link{color:var(--muted);font-size:12px;text-decoration:underline;align-self:flex-start}
+.migrate{margin-top:16px;padding:16px;border-radius:var(--r);border:1px solid var(--accent);background:color-mix(in srgb,var(--accent) 8%,var(--surface));display:flex;flex-direction:column;gap:10px}
+.migrate b{font-size:15px}
+@media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+</style>
+
+</head>
+<body>
+<div class="wrap">
+  <div class="topbar">
+    <div class="date" id="date"></div>
+    <button class="pjbtn" id="btnPj" aria-pressed="false">プロジェクト<span class="n" id="pjCount"></span></button>
+  </div>
+  <header class="head">
+    <h1 class="title" id="title">Task</h1>
+    <div class="headbtns">
+      <button class="iconbtn" id="btnDone" aria-label="成果を見る" title="成果"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></svg></button>
+      <button class="iconbtn" id="btnExport" aria-label="データとアカウント" title="データとアカウント"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 15V3M7 8l5-5 5 5M5 21h14"/></svg></button>
+      <button class="iconbtn" id="btnImport" aria-label="まとめて取り込む" title="まとめて取り込む"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12M7 10l5 5 5-5M5 21h14"/></svg></button>
+      <button class="iconbtn" id="btnGenres" aria-label="ジャンルを編集" title="ジャンルを編集"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6h16M4 12h10M4 18h6"/></svg></button>
+    </div>
+  </header>
+  <div class="sync" id="sync">読み込み中…</div>
+  <main id="main"></main>
+</div>
+
+<div class="dock">
+  <div class="dock-in">
+    <form class="composer" id="composer" autocomplete="off">
+      <div class="c1">
+        <textarea id="q" rows="1" placeholder="タイトル" aria-label="タイトル"></textarea>
+        <button type="submit" aria-label="追加"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></button>
+      </div>
+      <div class="c2" id="c2">
+        <input id="qPerson" placeholder="フォルダ（任意）" aria-label="フォルダ" list="persons">
+        <div class="toggle2" role="group" aria-label="納期">
+          <button type="button" data-due="today" aria-pressed="false">今日</button>
+          <button type="button" data-due="none" aria-pressed="true">未定</button>
+        </div>
+      </div>
+      <datalist id="persons"></datalist>
+    </form>
+    <nav class="tabs" role="tablist">
+      <button class="tab" role="tab" data-b="task"><b>T</b><span>Task</span></button>
+      <button class="tab" role="tab" data-b="stock"><b>S</b><span>Stock</span></button>
+      <button class="tab" role="tab" data-b="log"><b>L</b><span>Log</span></button>
+      <button class="tab" role="tab" data-b="vision"><b>V</b><span>Vision</span></button>
+    </nav>
+  </div>
+</div>
+
+<div class="login" id="login" hidden>
+  <form class="login-in" id="loginForm" autocomplete="on">
+    <div class="logo" aria-hidden="true"><b style="background:var(--task)">T</b><b style="background:var(--stock)">S</b><b style="background:var(--log)">L</b><b style="background:var(--vision)">V</b></div>
+    <h1>TSLV</h1>
+    <p class="note">Firebaseで登録したメールアドレスとパスワードでログインします。一度ログインすれば、次からは入力不要です。</p>
+    <div class="field"><label for="lgEmail">メールアドレス</label><input id="lgEmail" type="email" autocomplete="username" required></div>
+    <div class="field"><label for="lgPass">パスワード</label><input id="lgPass" type="password" autocomplete="current-password" required></div>
+    <p class="err" id="lgErr" role="alert"></p>
+    <button class="btn" type="submit" id="lgBtn">ログイン</button>
+    <button class="link" type="button" id="lgReset">パスワードを忘れた</button>
+  </form>
+</div>
+<div id="overlay" hidden></div>
+<div id="toastHost"></div>
+
+<script type="module">
+import { initializeApp } from "./firebase-app.js";
+import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, signOut, sendPasswordResetEmail } from "./firebase-auth.js";
+import { initializeFirestore, persistentLocalCache, persistentMultipleTabManager, collection, doc as fsDoc, setDoc, deleteDoc, onSnapshot, writeBatch } from "./firebase-firestore.js";
+
+const FIREBASE_CONFIG = {
+  apiKey: "AIzaSyCz7OYBgB0pJAtxDpgtVUC3hPfl-6LQ1VQ",
+  authDomain: "tslv-27389.firebaseapp.com",
+  projectId: "tslv-27389",
+  storageBucket: "tslv-27389.firebasestorage.app",
+  messagingSenderId: "762246445689",
+  appId: "1:762246445689:web:ff5d2162075e19e756f2a8"
+};
+
+if("serviceWorker" in navigator && !window.__TSLV_LOCAL) navigator.serviceWorker.register("./sw.js").catch(()=>{});
+
+(() => {
+"use strict";
+// ---------- constants ----------
+const BOXES = {
+  task:  {name:"Task",  jp:"アクションが必要"},
+  log:   {name:"Log",   jp:"書き留めておく"},
+  stock: {name:"Stock", jp:"必要なときに引き出す"},
+  vision:{name:"Vision",jp:"日頃ストックして見返す"}
+};
+const DEFAULT_GENRES = {
+  task:  ["タスク","聞きたいこと"],
+  log:   ["学びの言語化","疑問・課題感"],
+  stock: ["アイデア","やりたいこと","ノウハウ","事例"],
+  vision:["将来のvision","方針・決意"]
+};
+// Taskのジャンルは必ず付ける。未指定なら初期ジャンル（最初は「タスク」。名前を変えたら追従）
+const taskDef = () => S.meta.taskDefault || "タスク";
+const TASK_VIEWS = [["today","今日やる"],["inbox","受信箱"],["pj","プロジェクト"],["wait","対応待ち"]];
+
+// ---------- state ----------
+const S = {
+  box:"task", view:"today", screen:"main", genre:null, inboxGenre:null, noteGenre:{log:null, stock:null, vision:null}, search:"", pjOpen:null, newDue:"none",
+  items:new Map(), meta:null, mode:"local"
+};
+S.meta = normMeta({});
+let col = null;
+const writeChains = new Map();
+
+// ---------- utils ----------
+const $ = s => document.querySelector(s);
+const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const pad = n => String(n).padStart(2,"0");
+const ymd = d => `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
+const today = () => ymd(new Date());
+const addDays = (s, n) => { const d = s ? new Date(s+"T00:00:00") : new Date(); d.setDate(d.getDate()+n); return ymd(d); };
+const daysBetween = (a, b) => Math.round((new Date(b+"T00:00:00") - new Date(a+"T00:00:00")) / 864e5);
+const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2,7);
+const WD = ["日","月","火","水","木","金","土"];
+const fmtDate = s => { if(!s) return ""; const d = new Date(s+"T00:00:00"); return `${d.getMonth()+1}/${d.getDate()}(${WD[d.getDay()]})`; };
+const fmtShort = s => { const d = new Date(s+"T00:00:00"); return `${d.getMonth()+1}/${d.getDate()}`; };
+const startOfWeek = () => { const d = new Date(); d.setDate(d.getDate()-((d.getDay()+6)%7)); return ymd(d); };
+const ICON = {
+  check:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>',
+  pin:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 17v5M8 3h8l-1 6 3 3v2H6v-2l3-3z"/></svg>',
+  up:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M7 14l5-5 5 5"/></svg>',
+  down:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M7 10l5 5 5-5"/></svg>',
+  chev:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M9 6l6 6-6 6"/></svg>',
+  plus:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>'
+};
+
+// ---------- storage ----------
+const LS_KEY = "tlsv.v1";
+function normItem(x){
+  const i = {...x};
+  if(i.box==="task"){
+    // 旧バージョンのステータスを新仕様（今日/未定＋保留）に寄せる
+    if(i.status==="today" && !i.due) i.due = i.todayDay || ymd(new Date(i.updatedAt||Date.now()));
+    if(i.status==="hold"||i.status==="someday"){ i.hold = true; }
+    if(i.status!=="done") i.status = "open";
+    if(!i.genre) i.genre = taskDef();
+  }
+  return i;
+}
+function normMeta(m){
+  const g = {}; for(const b of Object.keys(BOXES)) g[b] = Array.isArray(m?.genres?.[b]) ? [...m.genres[b]] : [...DEFAULT_GENRES[b]];
+  const td = m?.taskDefault || "タスク";
+  if(!g.task.includes(td)) g.task.unshift(td);
+  const notes = {}; for(const b of Object.keys(BOXES)) notes[b] = {...(m?.genreNotes?.[b]||{})};
+  // 初期の説明文：Taskの「Claude」ジャンル
+  if(g.task.includes("Claude") && notes.task.Claude===undefined) notes.task.Claude = "進行中のチャットの管理用。まだ投げてない議題はstockへ。";
+  const ts = {vision: Array.isArray(m?.titleSort?.vision) ? [...m.titleSort.vision] : ["将来のvision","選択肢の整理"]};
+  return {genres:g, projects:Array.isArray(m?.projects)?m.projects.map(p=>({...p})):[], taskDefault:td, genreNotes:notes, titleSort:ts, seeds:Array.isArray(m?.seeds)?[...m.seeds]:[]};
+}
+function lsSave(){ if(S.mode!=="local") return; try{ localStorage.setItem(LS_KEY, JSON.stringify({items:[...S.items.values()], meta:S.meta})); }catch(e){} }
+function lsLoad(){ try{ const o = JSON.parse(localStorage.getItem(LS_KEY)||"null"); if(!o) return; if(o.meta) S.meta = normMeta(o.meta); (o.items||[]).forEach(i=>S.items.set(i.id,normItem(i))); }catch(e){} }
+function queueWrite(id, fn){
+  const next = (writeChains.get(id) || Promise.resolve()).then(fn).catch(e => setSync(e?.code==="quota_exceeded" ? "保存できる件数の上限に達しました。古い完了項目を削除してください" : "保存に失敗しました。通信状況を確認してください", true));
+  writeChains.set(id, next); return next;
+}
+function persistItem(item){ S.items.set(item.id, item); if(S.mode==="db") queueWrite(item.id, () => col.doc(item.id).set(item)); else lsSave(); }
+function removeItem(id){ S.items.delete(id); if(S.mode==="db") queueWrite(id, () => col.doc(id).delete()); else lsSave(); }
+function persistMeta(){ if(S.mode==="db"){ const m = structuredClone(S.meta); queueWrite("meta", () => col.doc("meta").set(m)); } else lsSave(); }
+function setSync(t, warn){ const el = $("#sync"); el.textContent = t; el.classList.toggle("warn", !!warn); }
+
+// ---------- Firebase（ログインとデータ同期） ----------
+let fbAuth = null, fbDb = null, unsubData = null;
+S.loaded = false;
+async function initStore(){
+  render();
+  if(window.__TSLV_LOCAL){ S.mode = "local"; lsLoad(); S.loaded = true; setSync("テスト用（この端末のみ）", true); render(); return; }
+  const app = initializeApp(FIREBASE_CONFIG);
+  fbAuth = getAuth(app);
+  try{ fbDb = initializeFirestore(app, {ignoreUndefinedProperties:true, localCache: persistentLocalCache({tabManager: persistentMultipleTabManager()})}); }
+  catch(e){ fbDb = initializeFirestore(app, {ignoreUndefinedProperties:true}); }
+  setSync("ログイン確認中…");
+  onAuthStateChanged(fbAuth, user => { if(user) startData(user.uid); else showLogin(); });
+}
+function startData(uid){
+  $("#login").hidden = true;
+  const path = ["users", uid, "docs"];
+  col = {
+    doc: id => ({ set: d => setDoc(fsDoc(fbDb, ...path, id), d), delete: () => deleteDoc(fsDoc(fbDb, ...path, id)) }),
+    // まとめ書き込み（移行用）。1回400件ずつ
+    setMany: async pairs => { for(let k=0; k<pairs.length; k+=400){ const bt = writeBatch(fbDb); pairs.slice(k,k+400).forEach(([id,d]) => bt.set(fsDoc(fbDb, ...path, id), d)); await bt.commit(); } }
+  };
+  S.mode = "db"; S.items = new Map(); S.loaded = false;
+  setSync("同期中…");
+  if(unsubData) unsubData();
+  unsubData = onSnapshot(collection(fbDb, ...path), {includeMetadataChanges:true}, snap => {
+    const m = new Map(); let meta = null;
+    snap.docs.forEach(d => { const x = d.data(); if(!x) return; if(d.id==="meta") meta = x; else m.set(d.id, normItem(x)); });
+    if(meta) S.meta = normMeta(meta);
+    S.items = m;
+    if(!snap.metadata.fromCache) S.loaded = true;
+    setSync(snap.metadata.fromCache ? "オフライン · 電波が戻ると自動で同期します" : snap.metadata.hasPendingWrites ? "保存中…" : "同期済み · iPhoneとMacで同じデータ");
+    render(); refreshSheet();
+  }, err => setSync(err?.code==="permission-denied" ? "データを読めません。Firestoreのルール設定を確認してください" : "同期が止まりました。アプリを開き直してください", true));
+}
+function showLogin(){
+  if(unsubData){ unsubData(); unsubData = null; }
+  S.items = new Map(); S.loaded = false;
+  $("#login").hidden = false; render();
+  setTimeout(()=>$("#lgEmail")?.focus(), 50);
+}
+const AUTH_MSG = {
+  "auth/invalid-credential":"メールアドレスかパスワードが違います",
+  "auth/invalid-email":"メールアドレスの形が正しくありません",
+  "auth/user-disabled":"このアカウントは無効になっています",
+  "auth/too-many-requests":"試行回数が多すぎます。少し待ってからもう一度試してください",
+  "auth/network-request-failed":"通信できません。電波を確認してください"
+};
+$("#loginForm").addEventListener("submit", async e => {
+  e.preventDefault(); const btn = $("#lgBtn"); $("#lgErr").textContent = ""; btn.disabled = true; btn.textContent = "ログイン中…";
+  try{ await signInWithEmailAndPassword(fbAuth, $("#lgEmail").value.trim(), $("#lgPass").value); $("#lgPass").value = ""; }
+  catch(err){ $("#lgErr").textContent = AUTH_MSG[err?.code] || "ログインできませんでした（" + (err?.code||"不明なエラー") + "）"; }
+  finally{ btn.disabled = false; btn.textContent = "ログイン"; }
+});
+$("#lgReset").addEventListener("click", async () => {
+  const em = $("#lgEmail").value.trim(); if(!em){ $("#lgErr").textContent = "先にメールアドレスを入力してください"; return; }
+  try{ await sendPasswordResetEmail(fbAuth, em); $("#lgErr").textContent = "パスワード再設定のメールを送りました"; }
+  catch(err){ $("#lgErr").textContent = AUTH_MSG[err?.code] || "送信できませんでした"; }
+});
+
+// ---------- domain ----------
+const all = () => [...S.items.values()];
+const ofBox = b => all().filter(i => i.box===b);
+const openTasks = () => ofBox("task").filter(i => i.status!=="done");
+const isDone = i => i.status==="done";
+const isToday = i => !isDone(i) && !!i.due && i.due <= today();
+const followLate = i => !isDone(i) && i.wait && i.followUp && i.followUp <= today();
+function inView(i, v){
+  if(i.box!=="task" || isDone(i)) return false;
+  switch(v){
+    case "today": return isToday(i) || followLate(i);
+    case "inbox": return !i.wait && !i.projectId && !(i.due && i.due <= today());
+    case "wait":  return !!i.wait;
+  }
+  return false;
+}
+function newItem(text, extra={}){
+  const now = Date.now();
+  const it = {id:uid(), box:S.box, text, note:"", genre:"", status:"open", hold:false, wait:false, person:"", followUp:"", due:"", projectId:"", url:"", pinned:false, order:now, createdAt:now, updatedAt:now, doneAt:null, doneDay:"", ...extra};
+  if(it.box==="task" && !it.genre) it.genre = taskDef();
+  return it;
+}
+function complete(it){
+  const prev = {...it};
+  const done = !isDone(it);
+  persistItem({...it, status: done ? "done" : "open", doneAt: done ? Date.now() : null, doneDay: done ? today() : "", updatedAt:Date.now()});
+  rerender();
+  if(done) toast("完了にしました", () => { persistItem(prev); rerender(); });
+}
+function toggleDue(it){
+  // 1回押すと今日、もう1回押すと未定
+  persistItem({...it, due: it.due===today() ? "" : today(), updatedAt:Date.now()});
+  rerender();
+}
+function markToday(it){ persistItem({...it, due:today(), wait:false, updatedAt:Date.now()}); rerender(); toast("今日やるに移しました"); }
+function markRequested(it){
+  const prev = {...it};
+  persistItem({...it, wait:true, followUp:addDays(null,3), due:"", updatedAt:Date.now()}); rerender();
+  toast("対応待ちに移しました（確認日は3日後）", () => { persistItem(prev); rerender(); });
+}
+function unwait(it){ persistItem({...it, wait:false, followUp:"", updatedAt:Date.now()}); rerender(); toast("受信箱に戻しました"); }
+function persons(){ return [...new Set(ofBox("task").map(i=>i.person).filter(Boolean))]; }
+
+// ---------- render ----------
+function rerender(){ render(); refreshSheet(); }
+function render(){
+  document.body.dataset.box = S.box;
+  const d = new Date(); $("#date").textContent = `${d.getFullYear()}.${pad(d.getMonth()+1)}.${pad(d.getDate())} ${WD[d.getDay()]}曜`;
+  const activePj = S.meta.projects.filter(p=>!p.archived).length;
+  $("#pjCount").textContent = activePj ? activePj : "";
+  $("#btnPj").setAttribute("aria-pressed", String(S.screen==="main" && S.box==="task" && S.view==="pj"));
+  $("#btnDone").setAttribute("aria-pressed", String(S.screen==="done"));
+  document.querySelectorAll(".tab").forEach(t => t.setAttribute("aria-selected", String(S.screen==="main" && t.dataset.b===S.box)));
+  if(S.screen==="done"){ $("#title").innerHTML = `Done<small>成し遂げたこと</small>`; document.body.dataset.box = "task"; }
+  else $("#title").innerHTML = `${BOXES[S.box].name}<small>${BOXES[S.box].jp}</small>`;
+  // composer
+  const pjList = S.box==="task" && S.view==="pj" && !S.pjOpen;
+  $("#c2").hidden = !(S.screen==="main" && S.box==="task") || pjList;
+  $("#composer").hidden = S.screen==="done";
+  $("#q").placeholder = pjList ? "新しいプロジェクト名" : S.box==="task" ? (S.view==="pj" ? "工程のタイトル" : S.view==="wait" ? "依頼したこと（確認日は3日後）" : "タイトル") : `${BOXES[S.box].name} に1行で書き留める`;
+  document.querySelectorAll("[data-due]").forEach(b=>b.setAttribute("aria-pressed", String(b.dataset.due===S.newDue)));
+  $("#persons").innerHTML = persons().map(p=>`<option value="${esc(p)}">`).join("");
+  const banner = (S.mode==="db" && S.loaded && S.items.size===0) ? `<div class="migrate"><b>以前のTSLVからデータを移しますか？</b><span class="note">Claude上のTSLVで「書き出し」→「コピー」した内容を貼り付けると、そのまま引き継げます。</span><button class="btn" data-act="migrate">データを読み込む</button></div>` : "";
+  $("#main").innerHTML = banner + (S.screen==="done" ? renderDone() : (S.box==="task" ? renderTask() : renderNote()));
+}
+// 今日：ジャンルで絞らない／受信箱：「すべて」なしで必ずどれか1つ／それ以外：「すべて」あり
+function curGenre(){
+  if(S.screen!=="main") return null;
+  if(S.box==="task" && (S.view==="today" || S.view==="pj")) return null;
+  if(S.box==="task" && S.view==="inbox"){ const gs = S.meta.genres.task; if(!gs.includes(S.inboxGenre)) S.inboxGenre = gs[0] || null; return S.inboxGenre; }
+  if(S.box==="log" || S.box==="stock" || S.box==="vision"){
+    // Log・Stockは「すべて」なし。必ずどれか1つのジャンル（ジャンルなしの項目があれば「未分類」も選べる）
+    const b = S.box, gs = S.meta.genres[b], hasNone = ofBox(b).some(i=>!i.genre), g = S.noteGenre[b];
+    if(gs.includes(g) || (g==="__none" && hasNone)) return g;
+    return S.noteGenre[b] = gs[0] || (hasNone ? "__none" : null);
+  }
+  return S.genre;
+}
+const genreLabel = g => g==="__none" ? "未分類" : g;
+function genreChips(box, source, noAll){
+  const gs = S.meta.genres[box]; const cur = curGenre();
+  const counts = {}; (source || (box==="task"?openTasks():ofBox(box))).forEach(i=>{ const k = i.genre||""; counts[k]=(counts[k]||0)+1; });
+  return `<div class="genres">
+    ${noAll ? "" : `<button class="chip" data-genre="" aria-pressed="${!cur}">すべて</button>`}
+    ${gs.map(g=>`<button class="chip" data-genre="${esc(g)}" aria-pressed="${cur===g}">${esc(g)}${counts[g]?` ${counts[g]}`:""}</button>`).join("")}
+    ${noAll && box!=="task" && counts[""] ? `<button class="chip" data-genre="__none" aria-pressed="${cur==="__none"}">未分類 ${counts[""]}</button>` : ""}
+    <button class="chip add" data-act="genres">＋ ジャンル</button>
+  </div>${cur && S.meta.genreNotes[box]?.[cur] ? `<p class="gdesc">${esc(S.meta.genreNotes[box][cur])}</p>` : ""}`;
+}
+const filterGenre = list => { const g = curGenre(); return !g ? list : g==="__none" ? list.filter(i=>!i.genre) : list.filter(i=>i.genre===g); };
+const byDue = (a,b)=>(a.due||"9999").localeCompare(b.due||"9999") || a.order-b.order;
+const collator = new Intl.Collator("ja", {numeric:true, sensitivity:"base"});
+const byTitle = (a,b)=>collator.compare(a.text, b.text) || a.order-b.order;
+const byName = (a,b)=>collator.compare(a, b);
+
+// 相手のいるタスクは「連携タスク 〇〇」の1行にまとめる
+// 連携タスク（相手名順）を上に固定し、その下に自分のタスクをタイトル順で並べる
+function grouped(list){
+  const groups = new Map(); const solo = [];
+  for(const i of list){
+    if(i.person){ if(!groups.has(i.person)) groups.set(i.person, []); groups.get(i.person).push(i); }
+    else solo.push(i);
+  }
+  return [...groups.keys()].sort(byName).map(p=>rowGroup(p, groups.get(p))).join("")
+    + [...solo].sort(byTitle).map(i=>rowTask(i)).join("");
+}
+function rowGroup(person, list){
+  const openAll = openTasks().filter(i=>i.person===person);
+  const nToday = openAll.filter(isToday).length, nWait = openAll.filter(i=>i.wait).length;
+  const late = openAll.some(i=>followLate(i) || (i.due && i.due < today()));
+  return `<div class="row grp ${late?"overdue":""}" data-person="${esc(person)}" role="button" tabindex="0" aria-label="${esc(person)}（${list.length}件）">
+    <span class="gt">${esc(person)}</span>
+    <span class="gn">${list.length}</span>
+    <span class="chev" aria-hidden="true">${ICON.chev}</span>
+  </div>`;
+}
+function section(title, inner, right=""){
+  return `<section class="section"><div class="sh"><h3>${esc(title)}</h3><span>${esc(right)}</span></div><div class="list">${inner}</div></section>`;
+}
+const emptyBox = (t, s) => `<div class="section empty"><b>${esc(t)}</b>${esc(s)}</div>`;
+
+function renderTask(){
+  const open = openTasks();
+  const cnt = Object.fromEntries(TASK_VIEWS.map(([k])=>[k, open.filter(i=>inView(i,k)).length]));
+  cnt.pj = S.meta.projects.filter(p=>!p.archived).length;
+  const lateWait = open.some(followLate);
+  let html = `<div class="views">${TASK_VIEWS.map(([k,l])=>`<button class="view" data-view="${k}" aria-pressed="${S.view===k}">${l}${k==="wait"&&lateWait?'<i class="alert" aria-label="確認日を過ぎた待ちあり"></i>':""}${cnt[k]?`<span class="n">${cnt[k]}</span>`:""}</button>`).join("")}</div>`;
+  if(S.view==="inbox") html += genreChips("task", open.filter(i=>inView(i,"inbox")), true);
+  else if(S.view==="wait") html += genreChips("task");
+  if(S.view==="pj") return html + renderProjects();
+  const list = filterGenre(open.filter(i=>inView(i,S.view)));
+  if(S.view==="today"){
+    const late = list.filter(i=>(i.due && i.due<today()) || (followLate(i) && !(i.due===today()))).sort(byDue);
+    const now = list.filter(i=>!late.includes(i)).sort((a,b)=>a.order-b.order);
+    const doneToday = filterGenre(ofBox("task").filter(i=>isDone(i) && i.doneDay===today())).sort((a,b)=>b.doneAt-a.doneAt);
+    if(late.length) html += section("要確認", grouped(late), `${late.length}件`);
+    html += now.length ? section("今日やる", grouped(now), `${now.length}件`) : (late.length ? "" : emptyBox("今日やることはまだありません","受信箱の「今日やる」を押すとここに入ります。下の入力欄から追加もできます"));
+    if(doneToday.length) html += section("今日終わったこと", doneToday.map(i=>rowTask(i)).join(""), `${doneToday.length}件`);
+  } else if(S.view==="inbox"){
+    html += list.length ? section(curGenre()||"受信箱", grouped(list), `${list.length}件`) : emptyBox("このジャンルの受信箱は空です","思いついたらまずここへ。「今日やる」か「依頼完了」を押すと振り分けられます");
+  } else {
+    const l = list;
+    const g = {}; l.forEach(i=>{ (g[i.person||"フォルダなし"] ||= []).push(i); });
+    const keys = Object.keys(g).filter(k=>k!=="フォルダなし").sort(byName); if(g["フォルダなし"]) keys.push("フォルダなし");
+    html += l.length ? keys.map(p=>[p,g[p]]).map(([p,x])=>section(p, x.sort(byTitle).map(i=>rowTask(i)).join(""), `${x.length}件`)).join("") : emptyBox("対応待ちはありません","受信箱で「依頼完了」を押すとここに入り、確認日（3日後）を過ぎると今日やるに浮き上がります");
+  }
+  return html;
+}
+
+function rowTask(i, opts={}){
+  if(i.box!=="task") return rowNote(i);
+  const meta = [];
+  if(i.person && !opts.hidePerson) meta.push(`<span class="person">@${esc(i.person)}</span>`);
+  if(i.wait && i.followUp && !isDone(i)){
+    const d = daysBetween(today(), i.followUp);
+    meta.push(d<0 ? `<span class="bad">確認日を${-d}日超過</span>` : d===0 ? `<span class="bad">今日確認</span>` : `<span>確認 ${fmtDate(i.followUp)}</span>`);
+  }
+  if(i.due && !isDone(i) && i.due < today()) meta.push(`<span class="bad">納期を${daysBetween(i.due,today())}日超過</span>`);
+  if(i.due && !isDone(i) && i.due > today()) meta.push(`<span>納期 ${fmtDate(i.due)}</span>`);
+  if(i.genre) meta.push(`<span class="tag">${esc(i.genre)}</span>`);
+  const pj = i.projectId && S.meta.projects.find(p=>p.id===i.projectId);
+  if(pj && !opts.inPj) meta.push(`<span>◇ ${esc(pj.name)}</span>`);
+  if(isDone(i) && i.doneAt){ const dd = new Date(i.doneAt); meta.push(`<span>${dd.getMonth()+1}/${dd.getDate()} 完了</span>`); }
+  const late = !isDone(i) && ((i.due && i.due < today()) || followLate(i));
+  // 受信箱の項目：「今日やる」「依頼完了」の2ボタン／今日やる：押すと受信箱へ戻る／対応待ち：押すと受信箱へ戻る
+  let dueBtn = "";
+  if(!isDone(i)){
+    const t = today();
+    if(i.wait) dueBtn = `<button class="due wait" data-act="unwait" aria-label="対応待ちを解除して受信箱へ戻す">待ち</button>`;
+    else if(i.due && i.due <= t) dueBtn = i.due===t
+      ? `<button class="due on" data-act="due" aria-label="今日やるを解除して受信箱へ戻す">今日</button>`
+      : `<button class="due late" data-act="totoday" aria-label="納期切れ。押すと今日やるに">${fmtShort(i.due)}</button>`;
+    else dueBtn = `<div class="btns"><button class="due" data-act="totoday">今日やる</button><button class="due" data-act="req">依頼完了</button></div>`;
+  }
+  return `<div class="row ${isDone(i)?"done":""} ${late?"overdue":""}" data-id="${i.id}">
+    <button class="check" data-act="done" aria-label="${isDone(i)?"未完了に戻す":"完了にする"}">${ICON.check}</button>
+    <div class="body" data-act="edit"><div class="txt">${esc(i.text)}</div>${meta.length?`<div class="meta">${meta.join("")}</div>`:""}</div>
+    ${opts.inPj && !isDone(i) ? `<div class="order"><button class="mini" data-act="up" aria-label="上へ">${ICON.up}</button><button class="mini" data-act="down" aria-label="下へ">${ICON.down}</button></div>` : ""}
+    ${dueBtn}
+  </div>`;
+}
+
+function renderDone(){
+  const done = ofBox("task").filter(isDone);
+  const t = today(), w = startOfWeek(), mo = t.slice(0,7);
+  const day = i => i.doneDay || ymd(new Date(i.doneAt||i.updatedAt));
+  const cT = done.filter(i=>day(i)===t).length, cW = done.filter(i=>day(i)>=w).length, cM = done.filter(i=>day(i).startsWith(mo)).length;
+  const days = [...Array(14)].map((_,k)=>addDays(null,k-13));
+  const per = days.map(d=>done.filter(i=>day(i)===d).length);
+  const max = Math.max(1,...per);
+  let html = `<div class="stats">
+    <div class="stat"><div class="k">今日</div><div class="v">${cT}</div><div class="s">件完了</div></div>
+    <div class="stat"><div class="k">今週</div><div class="v">${cW}</div><div class="s">月曜から</div></div>
+    <div class="stat"><div class="k">今月</div><div class="v">${cM}</div><div class="s">${Number(mo.slice(5))}月</div></div>
+  </div>
+  <div class="section"><div class="sh"><h3>直近14日</h3><span>最多 ${Math.max(...per)}件/日</span></div>
+    <div class="bars" role="img" aria-label="直近14日の完了数">${per.map((n,k)=>`<i class="${n?"":"zero"}" style="height:${Math.max(4,n/max*100)}%" title="${fmtShort(days[k])} ${n}件"></i>`).join("")}</div>
+    <div class="barlab">${days.map((d,k)=>`<span>${k%2?"":Number(d.slice(8))}</span>`).join("")}</div></div>`;
+  const list = done.sort((a,b)=>(b.doneAt||0)-(a.doneAt||0));
+  const g = {};
+  list.forEach(i=>{ const d = day(i); const k = d===t?"今日":d>=w?"今週":d.startsWith(mo)?"今月":`${Number(d.slice(5,7))}月`; (g[k] ||= []).push(i); });
+  const secs = Object.entries(g).map(([k,l])=>section(k, l.map(i=>rowTask(i)).join(""), `${l.length}件`)).join("");
+  return html + (secs || emptyBox("まだ完了した項目はありません","チェックを付けるとここに積み上がります"));
+}
+
+function renderProjects(){
+  const tasks = ofBox("task");
+  if(S.pjOpen){
+    const p = S.meta.projects.find(x=>x.id===S.pjOpen);
+    if(!p){ S.pjOpen = null; return renderProjects(); }
+    const list = tasks.filter(i=>i.projectId===p.id);
+    const open = list.filter(i=>!isDone(i)).sort((a,b)=>a.order-b.order), done = list.filter(isDone).sort((a,b)=>(b.doneAt||0)-(a.doneAt||0));
+    const pct = list.length ? Math.round(done.length/list.length*100) : 0;
+    return `<button class="back" data-act="pjback">← プロジェクト一覧</button>
+      <div class="pjhead"><h2>${esc(p.name)}</h2>
+      <div class="prog"><i style="width:${pct}%"></i></div>
+      <div class="pm"><span>${done.length}/${list.length} 完了</span><span>${pct}%</span></div></div>
+      ${open.length ? section("工程（上から順に進める）", open.map(i=>rowTask(i,{inPj:true})).join(""), `${open.length}件`) : emptyBox("工程がまだありません","下の入力欄から追加すると、このプロジェクトの工程になります")}
+      ${done.length ? section("完了した工程", done.map(i=>rowTask(i,{inPj:true})).join(""), `${done.length}件`) : ""}
+      <div class="section actions"><button class="btn ghost" data-act="pjrename">名前を変更</button><button class="btn ghost" data-act="pjarchive">${p.archived?"進行中に戻す":"完了として閉じる"}</button></div>`;
+  }
+  const active = S.meta.projects.filter(p=>!p.archived), closed = S.meta.projects.filter(p=>p.archived);
+  // 一覧はタイトル・進捗ゲージ・NA（ネクストアクション＝次にやる工程）だけ
+  const card = p => { const l = tasks.filter(i=>i.projectId===p.id); const d = l.filter(isDone).length; const pct = l.length ? Math.round(d/l.length*100) : 0; const nx = l.filter(i=>!isDone(i)).sort((a,b)=>a.order-b.order)[0];
+    return `<button class="pj" data-pj="${p.id}">
+      <div class="top"><span class="name">${esc(p.name)}</span><span class="pct">${pct}<small>%</small></span></div>
+      <div class="prog"><i style="width:${pct}%"></i></div>
+      <div class="na ${nx?"":"none"}"><b>NA</b><span>${nx?esc(nx.text):(l.length?"すべて完了":"工程を追加してください")}</span></div></button>`; };
+  return `${active.length ? `<section class="section"><div class="sh"><h3>進行中</h3><span>${active.length}件</span></div>${active.map(card).join("")}</section>` : emptyBox("進行中のプロジェクトはありません","下の入力欄にプロジェクト名を入れると作成できます")}
+    ${closed.length ? `<section class="section"><div class="sh"><h3>完了したプロジェクト</h3><span>${closed.length}件</span></div>${closed.map(card).join("")}</section>` : ""}`;
+}
+
+function renderNote(){
+  const box = S.box;
+  // 検索中はジャンルをまたいで探す
+  let list = S.search ? ofBox(box) : filterGenre(ofBox(box));
+  if(S.search){ const q = S.search.toLowerCase(); list = list.filter(i=>(i.text+" "+i.note+" "+i.url+" "+i.genre).toLowerCase().includes(q)); }
+  if(box==="stock") list.sort(byTitle);
+  else if(box==="vision" && S.meta.titleSort.vision.includes(curGenre())) list.sort((a,b)=>(b.pinned?1:0)-(a.pinned?1:0) || byTitle(a,b));
+  else list.sort((a,b)=>(b.pinned?1:0)-(a.pinned?1:0) || b.createdAt-a.createdAt);
+  let html = genreChips(box, null, true);
+  if(box!=="log") html += `<input class="search" id="search" type="search" placeholder="${box==="stock"?"キーワードで引き出す":"検索"}" value="${esc(S.search)}" aria-label="検索">`;
+  if(!list.length) return html + emptyBox(S.search?"見つかりませんでした":`${BOXES[box].name} はまだ空です`, S.search?"別のキーワードで試してください":({log:"学びや疑問を1行で。書くこと自体が目的なので、整える必要はありません",stock:"アイデア・行きたい店・ノウハウ・事例リンクを入れておき、必要なときに検索で引き出します",vision:"理想の家やオフィス、方針・決意。ピン留めすると常に上に表示されます"})[box]);
+  if(box==="log"){
+    const g = {}; list.forEach(i=>{ (g[ymd(new Date(i.createdAt))] ||= []).push(i); });
+    html += Object.entries(g).map(([d,l])=>section(d===today()?"今日":fmtDate(d), l.map(rowNote).join(""), `${l.length}件`)).join("");
+  } else if(box==="vision"){
+    const pin = list.filter(i=>i.pinned), rest = list.filter(i=>!i.pinned);
+    if(pin.length) html += section("ピン留め", pin.map(rowNote).join(""), `${pin.length}件`);
+    if(rest.length) html += section("ストック", rest.map(rowNote).join(""), `${rest.length}件`);
+  } else html += section(S.search ? "検索結果（全ジャンル）" : genreLabel(curGenre()) || "すべて", list.map(rowNote).join(""), `${list.length}件`);
+  return html;
+}
+function rowNote(i){
+  const meta = [];
+  if(i.genre) meta.push(`<span class="tag">${esc(i.genre)}</span>`);
+  if(i.url) meta.push(`<a href="${esc(i.url)}" target="_blank" rel="noopener">${esc(i.url.replace(/^https?:\/\//,""))}</a>`);
+  if(i.note) meta.push(`<span>メモあり</span>`);
+  if(i.box!=="log"){ const d = new Date(i.createdAt); meta.push(`<span>${d.getMonth()+1}/${d.getDate()}</span>`); }
+  return `<div class="row" data-id="${i.id}"><i class="dot"></i>
+    <div class="body" data-act="${i.box==="vision"?"view":"edit"}"><div class="txt">${esc(i.text)}</div>${meta.length?`<div class="meta">${meta.join("")}</div>`:""}</div>
+    ${i.box==="vision"?`<button class="mini" data-act="pin" aria-pressed="${!!i.pinned}" aria-label="ピン留め">${ICON.pin}</button>`:""}
+  </div>`;
+}
+
+// ---------- sheets ----------
+let sheetRedraw = null;
+function openSheet(html, onMount, redraw){
+  const o = $("#overlay"); o.hidden = false;
+  const prevScroll = o.querySelector(".sheet")?.scrollTop || 0;
+  o.innerHTML = `<div class="scrim" data-close></div><div class="sheet" role="dialog" aria-modal="true"><div class="sheet-in">${html}</div></div>`;
+  o.querySelector("[data-close]").onclick = closeSheet;
+  const sh = o.querySelector(".sheet");
+  if(redraw) sh.scrollTop = prevScroll;
+  sheetRedraw = redraw || null;
+  onMount && onMount(sh);
+}
+function closeSheet(){ const o = $("#overlay"); o.hidden = true; o.innerHTML = ""; sheetRedraw = null; }
+function refreshSheet(){ if(sheetRedraw) sheetRedraw(); }
+document.addEventListener("keydown", e => { if(e.key==="Escape" && !$("#overlay").hidden) closeSheet(); });
+
+// 連携タスク一覧
+// フォルダ（相手）の名前を一括変更。既にある名前にすると1つのフォルダにまとまる
+function renameFolder(oldN, newN){
+  newN = newN.trim(); if(!newN || newN===oldN) return false;
+  const merged = persons().includes(newN);
+  ofBox("task").filter(i=>i.person===oldN).forEach(i=>persistItem({...i, person:newN, updatedAt:Date.now()}));
+  toast(merged ? `「${newN}」にまとめました` : `「${oldN}」を「${newN}」に変更しました`);
+  return true;
+}
+function folderGenre(person, opened){
+  // 今開いているジャンルに追加する。ジャンルを絞っていない画面なら、そのフォルダで一番多いジャンル
+  if(opened && opened!=="__none") return opened;
+  const c = {}; ofBox("task").filter(i=>i.person===person).forEach(i=>{ c[i.genre]=(c[i.genre]||0)+1; });
+  return Object.entries(c).sort((a,b)=>b[1]-a[1])[0]?.[0] || taskDef();
+}
+function personSheet(person, openedGenre){
+  if(openedGenre===undefined) openedGenre = curGenre();
+  let renaming = false;
+  const draw = () => {
+    const genre = folderGenre(person, openedGenre);
+    const list = openTasks().filter(i=>i.person===person);
+    const done = ofBox("task").filter(i=>isDone(i) && i.person===person).sort((a,b)=>(b.doneAt||0)-(a.doneAt||0)).slice(0,10);
+    const tdy = list.filter(i=>isToday(i) || followLate(i)).sort(byTitle);
+    const wait = list.filter(i=>i.wait && !tdy.includes(i)).sort(byTitle);
+    const rest = list.filter(i=>!tdy.includes(i) && !wait.includes(i)).sort(byTitle);
+    const sec = (t,l) => l.length ? section(t, l.map(i=>rowTask(i,{hidePerson:true})).join(""), `${l.length}件`) : "";
+    openSheet(`${renaming
+        ? `<form class="inlineform" id="rnForm"><input id="rnName" value="${esc(person)}" aria-label="フォルダ名"><button class="btn" type="submit">変更</button></form><p class="note">このフォルダの全タスク（完了分も含む）の名前がまとめて変わります。既にあるフォルダ名にすると、1つにまとまります。</p>`
+        : `<div class="sh" style="margin:0;align-items:center"><h2>${esc(person)}</h2><button class="btn ghost" data-rn style="padding:6px 12px;font-size:13px">名前を変更</button></div>`}
+      <p class="note" style="margin-top:-6px">ジャンル：${esc(genre)}</p>
+      ${sec("今日やる・要確認", tdy)}${sec("対応待ち", wait)}${sec("受信箱", rest)}
+      ${list.length ? "" : `<p class="note">未完了のタスクはありません。</p>`}
+      <form class="inlineform" id="psForm"><input id="psText" placeholder="「${esc(person)}」にタスクを追加" aria-label="タスクを追加"><button class="btn" type="submit">追加</button></form>
+      ${done.length ? sec("最近完了", done) : ""}
+      <div class="actions"><button class="btn ghost grow" data-close2>閉じる</button></div>`, sh => {
+      sh.querySelector("[data-close2]").onclick = closeSheet;
+      const rb = sh.querySelector("[data-rn]"); if(rb) rb.onclick = () => { renaming = true; draw(); setTimeout(()=>{ const x = $("#rnName"); if(x){ x.focus(); x.select(); } },0); };
+      const rf = sh.querySelector("#rnForm"); if(rf) rf.onsubmit = e => { e.preventDefault(); const v = sh.querySelector("#rnName").value.trim();
+        renaming = false; if(renameFolder(person, v)){ person = v; render(); } draw(); };
+      sh.querySelector("#psForm").onsubmit = e => { e.preventDefault(); const v = sh.querySelector("#psText").value.trim(); if(!v) return;
+        persistItem(newItem(v, {box:"task", person, genre, due: S.view==="today" ? today() : ""})); rerender(); setTimeout(()=>$("#psText")?.focus(),0); };
+      sh.addEventListener("click", e => { if(e.target.closest("[data-rn]")) return; rowAction(e, () => personSheet(person, openedGenre)); });
+    }, draw);
+  };
+  draw();
+}
+
+function editSheet(id, back){
+  const it0 = S.items.get(id); if(!it0) return;
+  const it = {...it0};
+  const draw = () => {
+    const isT = it.box==="task";
+    const gs = S.meta.genres[it.box];
+    const dueMode = !it.due ? "none" : it.due===today() ? "today" : "date";
+    openSheet(`
+      <h2>編集</h2>
+      <div class="field"><label for="e_text">タイトル</label><textarea id="e_text" style="min-height:56px">${esc(it.text)}</textarea></div>
+      ${isT?`
+      <div class="grid2">
+        <div class="field"><label for="e_person">フォルダ</label><input id="e_person" value="${esc(it.person)}" placeholder="任意" list="persons"></div>
+        <div class="field"><label for="e_genre">ジャンル</label><select id="e_genre">${gs.map(g=>`<option ${it.genre===g?"selected":""}>${esc(g)}</option>`).join("")}${it.genre&&!gs.includes(it.genre)?`<option selected>${esc(it.genre)}</option>`:""}</select></div>
+      </div>
+      <div class="field"><span class="lab">納期</span><div class="seg">
+        <button data-setdue="today" aria-pressed="${dueMode==="today"}">今日</button>
+        <button data-setdue="none" aria-pressed="${dueMode==="none"}">未定</button>
+        <input type="date" id="e_due" value="${dueMode==="date"?esc(it.due):""}" aria-label="日付を指定">
+      </div></div>
+      `:`
+      <div class="field"><label for="e_genre">ジャンル</label><select id="e_genre"><option value="">なし</option>${gs.map(g=>`<option ${it.genre===g?"selected":""}>${esc(g)}</option>`).join("")}${it.genre&&!gs.includes(it.genre)?`<option selected>${esc(it.genre)}</option>`:""}</select></div>
+      <div class="field"><label for="e_url">リンク</label><input id="e_url" type="url" value="${esc(it.url)}" placeholder="https://"></div>`}
+      <div class="field"><label for="e_note">メモ</label><textarea id="e_note" placeholder="補足・経緯など">${esc(it.note)}</textarea></div>
+      ${it.box==="vision"?`<label class="sw"><span>ピン留めして常に上に表示</span><input type="checkbox" id="e_pin" ${it.pinned?"checked":""}></label>`:""}
+      <div class="actions"><button class="btn grow" id="e_save">保存</button><button class="btn ghost" data-close2>閉じる</button></div>
+      <div class="actions"><button class="btn danger" id="e_del">削除</button></div>
+    `, sh => {
+      const q = s => sh.querySelector(s);
+      const sync = () => {
+        it.text = q("#e_text").value.trim();
+        it.genre = q("#e_genre").value; it.note = q("#e_note").value;
+        if(q("#e_url")) it.url = q("#e_url").value.trim();
+        if(q("#e_person")){ it.person = q("#e_person").value.trim(); if(q("#e_due").value) it.due = q("#e_due").value; }
+        if(q("#e_pin")) it.pinned = q("#e_pin").checked;
+      };
+      sh.querySelectorAll("[data-setdue]").forEach(b=>b.onclick=()=>{ sync(); it.due = b.dataset.setdue==="today" ? today() : ""; if(q("#e_due")) q("#e_due").value=""; draw(); });
+      const dueIn = q("#e_due"); if(dueIn) dueIn.onchange = () => { sync(); it.due = dueIn.value; draw(); };
+      const finish = () => { closeSheet(); render(); if(back) back(); };
+      enterKeys(q("#e_text"), () => q("#e_save").click());
+      enterKeys(q("#e_note"), () => q("#e_save").click());
+      q("#e_save").onclick = () => { sync(); if(!it.text) return; it.updatedAt = Date.now(); persistItem({...it}); finish(); };
+      q("[data-close2]").onclick = finish;
+      q("#e_del").onclick = () => { const bak = {...it0}; removeItem(id); finish(); toast("削除しました", () => { persistItem(bak); rerender(); }); };
+    });
+  };
+  draw();
+}
+
+// Vision：押すとメモ（具体の内容）を読む画面。タイトル・ジャンルは「編集」から
+function viewSheet(id){
+  const it = S.items.get(id); if(!it) return;
+  openSheet(`<h2>${esc(it.text)}</h2>
+    <div class="meta" style="margin-top:-6px">${it.genre?`<span class="tag">${esc(it.genre)}</span>`:""}${it.pinned?"<span>ピン留め中</span>":""}</div>
+    ${it.note ? `<div class="vnote">${esc(it.note)}</div>` : `<div class="vnote empty">メモはまだありません。「編集」から具体的な内容を書けます。</div>`}
+    ${it.url ? `<a href="${esc(it.url)}" target="_blank" rel="noopener" style="color:var(--accent);word-break:break-all">${esc(it.url)}</a>` : ""}
+    <div class="actions"><button class="btn grow" id="v_edit">編集</button><button class="btn ghost" data-close2>閉じる</button></div>`, sh => {
+    sh.querySelector("[data-close2]").onclick = closeSheet;
+    sh.querySelector("#v_edit").onclick = () => editSheet(id, () => viewSheet(id));
+  });
+}
+function renameGenre(box, oldN, newN){
+  newN = newN.trim(); const gs = S.meta.genres[box];
+  if(!newN || newN===oldN) return false;
+  if(gs.includes(newN)){ toast("同じ名前のジャンルがすでにあります"); return false; }
+  gs[gs.indexOf(oldN)] = newN;
+  if(box==="task" && taskDef()===oldN) S.meta.taskDefault = newN;
+  const notes = S.meta.genreNotes[box]; if(notes[oldN]!==undefined){ notes[newN] = notes[oldN]; delete notes[oldN]; }
+  if(box==="vision"){ const t = S.meta.titleSort.vision; const k = t.indexOf(oldN); if(k>=0) t[k] = newN; }
+  ofBox(box).filter(i=>i.genre===oldN).forEach(i=>persistItem({...i, genre:newN, updatedAt:Date.now()}));
+  if(S.genre===oldN) S.genre = newN; if(S.inboxGenre===oldN) S.inboxGenre = newN; if(S.noteGenre[box]===oldN) S.noteGenre[box] = newN;
+  persistMeta(); return true;
+}
+function genresSheet(){
+  const box = S.screen==="main" ? S.box : "task";
+  const GS = () => S.meta.genres[box];   // 同期で中身が入れ替わっても、常に最新の一覧を触る
+  const grip = '<svg viewBox="0 0 24 24" fill="currentColor"><circle cx="9" cy="6" r="1.6"/><circle cx="15" cy="6" r="1.6"/><circle cx="9" cy="12" r="1.6"/><circle cx="15" cy="12" r="1.6"/><circle cx="9" cy="18" r="1.6"/><circle cx="15" cy="18" r="1.6"/></svg>';
+  const draw = () => {
+    const gs = GS(), notes = S.meta.genreNotes[box];
+    openSheet(`<h2>${BOXES[box].name} のジャンル</h2>
+      <p class="note">左の ⋮⋮ をドラッグして並べ替え。名前をタップすると書き換えられます（付いている項目もまとめて変わります）。下の段には、選んだときに表示する説明を書けます。${box==="task"?"削除すると、付いていた項目は「"+esc(taskDef())+"」に戻ります。":"削除しても項目は消えず、ジャンルが外れるだけです。"}</p>
+      <div class="gl" id="gl">${gs.map(g=>`<div class="gi" data-name="${esc(g)}">
+        <span class="handle" aria-hidden="true">${grip}</span>
+        <input class="gname" data-rn value="${esc(g)}" aria-label="ジャンル名：${esc(g)}">
+        <button class="mini" data-mv="-1" aria-label="${esc(g)}を上へ">${ICON.up}</button>
+        <button class="mini" data-mv="1" aria-label="${esc(g)}を下へ">${ICON.down}</button>
+        ${box==="task" && g===taskDef() ? '<span class="mini" title="初期ジャンルのため削除できません" style="font-size:11px">初期</span>' : `<button class="mini" data-rm aria-label="${esc(g)}を削除" style="color:var(--danger)">✕</button>`}
+        <input class="gdesc-in" data-gn value="${esc(notes[g]||"")}" placeholder="説明（任意）" aria-label="${esc(g)}の説明"></div>`).join("")}</div>
+      <form class="inlineform" id="gForm"><input id="gName" placeholder="新しいジャンル（例：Unicorn）" aria-label="新しいジャンル"><button class="btn" type="submit">追加</button></form>
+      <div class="actions"><button class="btn ghost grow" data-close2>閉じる</button></div>`, sh => {
+      const nameOf = el => el.closest(".gi").dataset.name;
+      const commitOrder = () => { const order = [...sh.querySelectorAll("#gl .gi")].map(x=>x.dataset.name); S.meta.genres[box] = order; persistMeta(); };
+      sh.querySelector("#gForm").onsubmit = e => { e.preventDefault(); const v = sh.querySelector("#gName").value.trim(); if(v && !GS().includes(v)){ GS().push(v); persistMeta(); } draw(); setTimeout(()=>$("#gName")?.focus(),0); };
+      sh.querySelectorAll("[data-rm]").forEach(b=>b.onclick=()=>{ const g = nameOf(b); const list = GS(); const k = list.indexOf(g); if(k<0) return; list.splice(k,1);
+        if(S.genre===g) S.genre=null; if(S.inboxGenre===g) S.inboxGenre=null; delete S.meta.genreNotes[box][g];
+        if(box==="task") ofBox("task").filter(i=>i.genre===g).forEach(i=>persistItem({...i, genre:taskDef(), updatedAt:Date.now()}));
+        persistMeta(); draw(); });
+      sh.querySelectorAll("[data-rn]").forEach(inp=>{
+        inp.onkeydown = e => { if(e.key==="Enter"){ e.preventDefault(); inp.blur(); } };
+        inp.onchange = () => { const oldN = nameOf(inp); if(!renameGenre(box, oldN, inp.value)) inp.value = oldN; else { draw(); toast(`「${oldN}」を「${inp.value.trim()}」に変更しました`); } };
+      });
+      sh.querySelectorAll("[data-gn]").forEach(inp=>{
+        inp.onkeydown = e => { if(e.key==="Enter"){ e.preventDefault(); inp.blur(); } };
+        inp.onchange = () => { const g = nameOf(inp); const v = inp.value.trim(); S.meta.genreNotes[box][g] = v; persistMeta(); };
+      });
+      // ▲▼：画面を作り直さずにその場で入れ替えるので、続けて何回でも押せる
+      sh.querySelectorAll("[data-mv]").forEach(b=>b.onclick=()=>{
+        const row = b.closest(".gi"); const d = +b.dataset.mv;
+        const sib = d<0 ? row.previousElementSibling : row.nextElementSibling; if(!sib) return;
+        if(d<0) sib.before(row); else sib.after(row);
+        commitOrder(); b.focus();
+      });
+      // ⋮⋮ ドラッグで並べ替え（指でもマウスでも）
+      sh.querySelectorAll(".handle").forEach(h=>{
+        h.addEventListener("pointerdown", e => {
+          e.preventDefault(); const row = h.closest(".gi"); const gl = row.parentElement;
+          row.classList.add("dragging");
+          const move = ev => {
+            const y = ev.clientY; let prev = row.previousElementSibling, next = row.nextElementSibling;
+            if(prev){ const r = prev.getBoundingClientRect(); if(y < r.top + r.height/2){ prev.before(row); return; } }
+            if(next){ const r = next.getBoundingClientRect(); if(y > r.top + r.height/2){ next.after(row); } }
+          };
+          // 行を動かすとポインタの捕捉が外れるため、画面全体で動きを追う
+          const up = () => { window.removeEventListener("pointermove", move); window.removeEventListener("pointerup", up); window.removeEventListener("pointercancel", up); row.classList.remove("dragging"); commitOrder(); };
+          window.addEventListener("pointermove", move); window.addEventListener("pointerup", up); window.addEventListener("pointercancel", up);
+        });
+      });
+      sh.querySelector("[data-close2]").onclick = () => { closeSheet(); render(); };
+    });
+  };
+  draw();
+}
+
+// 「@相手」「#ジャンル」だけの行は、それ以降の全項目に適用する指定として扱う
+// 「!今日」「!受信箱」「!待ち」「!11/3」（日付＝納期あり）「!納期あり」（明日）も同じく一括指定
+const TAG_LINE = /^(?:[@＠#＃!！][^\s　@＠#＃!！]+[\s　]*)+$/;
+const VIEW_WORD = {"今日":"today","今日やる":"today","受信箱":"inbox","未定":"inbox","待ち":"wait","対応待ち":"wait","納期あり":"dated"};
+function parseViewToken(v){
+  v = v.normalize("NFKC");
+  if(VIEW_WORD[v]==='dated') return {view:"dated", due:addDays(null,1)};
+  if(VIEW_WORD[v]) return {view:VIEW_WORD[v], due:""};
+  const m = v.match(/^(\d{1,2})[\/\-.月](\d{1,2})日?$/);
+  if(m){
+    const now = new Date(); let d = new Date(now.getFullYear(), +m[1]-1, +m[2]);
+    if(ymd(d) < today()) d = new Date(now.getFullYear()+1, +m[1]-1, +m[2]);
+    const s = ymd(d); return {view: s===today() ? "today" : "dated", due:s};
+  }
+  return null;
+}
+function parseImport(text, box){
+  let person = "", genre = "", view = "", due = ""; const rows = [];
+  for(const raw of text.split(/\r?\n/)){
+    let l = raw.trim();
+    if(!l || /^[_＿\-ー─=]{3,}$/.test(l) || /^[*＊<＜【]/.test(l)) continue;
+    if(TAG_LINE.test(l)){
+      for(const m of l.matchAll(/([@＠#＃!！])([^\s　@＠#＃!！]+)/g)){
+        if(m[1]==="@"||m[1]==="＠") person = m[2];
+        else if(m[1]==="#"||m[1]==="＃") genre = m[2];
+        else { const p = parseViewToken(m[2]); if(p){ view = p.view; due = p.due; } }
+      }
+      continue;
+    }
+    l = l.replace(/^(?:[・\-–—•◦○●⬛⬜🟦◼◻■□]|︎|️|\s|　)+/u,"").replace(/^[ー─]\s*/,"").trim();
+    if(!l) continue;
+    rows.push({text:l, person: box==="task" ? person : "", genre, view: box==="task" ? (view||"inbox") : "", due: box==="task" ? due : ""});
+  }
+  return rows;
+}
+function importSheet(){
+  const box = S.screen==="main" ? S.box : "task";
+  openSheet(`<h2>まとめて取り込む</h2>
+    <p class="note">1行＝1項目で <b>${BOXES[box].name}</b>${box==="task"?" の受信箱":""} に入ります。冒頭に ${box==="task"?"<b>@フォルダ</b>・<b>!分類</b>・":""}<b>#ジャンル</b> だけの行を書くと、下の全項目にまとめて付きます（途中に書けば、そこから下が切り替わります）。${box==="task"?"<br><b>!分類</b>：<b>!今日</b>　<b>!受信箱</b>　<b>!待ち</b>（確認日は3日後）　<b>!11/3</b>（日付で納期あり。<b>!納期あり</b>だけなら明日）<br>":""}行頭の記号・罫線・「*」「＜」の見出し行は自動で外します。</p>
+    <div class="field"><label for="imp">貼り付け</label><textarea id="imp" style="min-height:200px" placeholder="${box==="task"?"@小島 #報酬 !今日&#10;・維持率/昇格率&#10;・外部給与明細&#10;!待ち&#10;・HR 切らせるスクリプト":"#ノウハウ&#10;・〇〇&#10;・〇〇"}"></textarea></div>
+    <p class="note" id="impPrev">貼り付けると、取り込まれる件数と適用内容がここに出ます</p>
+    <div class="actions"><button class="btn grow" id="impGo">取り込む</button><button class="btn ghost" data-close2>閉じる</button></div>`, sh => {
+    const ta = sh.querySelector("#imp"), prev = sh.querySelector("#impPrev");
+    sh.querySelector("[data-close2]").onclick = closeSheet;
+    ta.oninput = () => {
+      const rows = parseImport(ta.value, box);
+      if(!rows.length){ prev.textContent = "取り込める行はまだありません"; return; }
+      const ps = [...new Set(rows.map(r=>r.person).filter(Boolean))], gs = [...new Set(rows.map(r=>r.genre).filter(Boolean))];
+      const VL = {today:"今日やる",inbox:"受信箱",dated:"納期あり（受信箱）",wait:"対応待ち"}; const vc = {};
+      rows.forEach(r=>{ if(r.view) vc[r.view] = (vc[r.view]||0)+1; });
+      const vs = Object.entries(vc).map(([k,n])=>`${VL[k]}${n}`);
+      prev.textContent = `${rows.length}件を取り込みます` + (vs.length?` ・ 分類：${vs.join("、")}`:"") + (ps.length?` ・ フォルダ：${ps.join("、")}`:"") + (gs.length?` ・ ジャンル：${gs.join("、")}`:"");
+    };
+    sh.querySelector("#impGo").onclick = () => {
+      const rows = parseImport(ta.value, box); const base = Date.now();
+      let addedGenre = false;
+      rows.forEach((r, n) => {
+        if(r.genre && !S.meta.genres[box].includes(r.genre)){ S.meta.genres[box].push(r.genre); addedGenre = true; }
+        const url = (r.text.match(/https?:\/\/\S+/)||[])[0] || "";
+        const ex = {box, url, person:r.person, genre:r.genre, id:uid()+n, createdAt:base+n, order:base+n};
+        if(r.view==="today") ex.due = r.due || today();
+        else if(r.view==="dated") ex.due = r.due;
+        else if(r.view==="wait"){ ex.wait = true; ex.followUp = addDays(null,3); }
+        persistItem(newItem(r.text, ex));
+      });
+      if(addedGenre) persistMeta();
+      const views = [...new Set(rows.map(r=>r.view))];
+      closeSheet(); S.screen = "main"; S.box = box; S.genre = null; if(box==="task") S.view = views.length===1 && views[0]!=="dated" ? views[0] : "inbox"; saveUi(); render();
+      toast(`${rows.length}件を取り込みました`);
+    };
+  });
+}
+
+// ---------- toast ----------
+let toastTimer;
+function toast(msg, undo){
+  const h = $("#toastHost"); clearTimeout(toastTimer);
+  h.innerHTML = `<div class="toast" role="status"><span>${esc(msg)}</span>${undo?'<button id="undo">元に戻す</button>':""}</div>`;
+  if(undo) $("#undo").onclick = () => { undo(); h.innerHTML = ""; };
+  toastTimer = setTimeout(()=>{ h.innerHTML=""; }, 4000);
+}
+
+// ---------- events ----------
+function rowAction(e, back){
+  const grp = e.target.closest("[data-person]"); if(grp){ personSheet(grp.dataset.person); return true; }
+  const a = e.target.closest("[data-act]"); if(!a) return false;
+  const row = a.closest("[data-id]"); const it = row && S.items.get(row.dataset.id); if(!it) return false;
+  const act = a.dataset.act;
+  if(act==="done") complete(it);
+  else if(act==="due") toggleDue(it);
+  else if(act==="totoday") markToday(it);
+  else if(act==="req") markRequested(it);
+  else if(act==="unwait") unwait(it);
+  else if(act==="edit") editSheet(it.id, back);
+  else if(act==="view") viewSheet(it.id);
+  else if(act==="pin"){ persistItem({...it, pinned:!it.pinned, updatedAt:Date.now()}); rerender(); }
+  else if(act==="up"||act==="down"){
+    const sib = openTasks().filter(i=>i.projectId===it.projectId).sort((a,b)=>a.order-b.order);
+    const k = sib.findIndex(i=>i.id===it.id), j = k + (act==="up"?-1:1);
+    if(j<0||j>=sib.length) return true;
+    const o1 = sib[k].order, o2 = sib[j].order;
+    persistItem({...sib[k], order:o2===o1?o1+(act==="up"?-1:1):o2}); persistItem({...sib[j], order:o1});
+    rerender();
+  }
+  return true;
+}
+
+document.querySelectorAll(".tab").forEach(t => t.onclick = () => { S.box = t.dataset.b; S.screen = "main"; S.genre = null; S.search = ""; saveUi(); render(); window.scrollTo({top:0}); });
+$("#btnPj").onclick = () => { S.screen = "main"; S.box = "task"; S.view = "pj"; S.pjOpen = null; saveUi(); render(); window.scrollTo({top:0}); };
+$("#btnDone").onclick = () => { S.screen = S.screen==="done" ? "main" : "done"; render(); window.scrollTo({top:0}); };
+$("#btnGenres").onclick = genresSheet;
+$("#btnImport").onclick = importSheet;
+$("#btnExport").onclick = exportSheet;
+
+// ---------- 書き出し（バックアップ・PWAへの移行用） ----------
+function exportData(){
+  const items = [...S.items.values()].sort((a,b)=>(a.createdAt||0)-(b.createdAt||0));
+  return {app:"TSLV", format:1, exportedAt:new Date().toISOString(), items, meta:S.meta};
+}
+function exportSheet(){
+  const data = exportData();
+  const json = JSON.stringify(data, null, 1);
+  const n = b => data.items.filter(i=>i.box===b).length;
+  const d = new Date(); const stamp = `${d.getFullYear()}${pad(d.getMonth()+1)}${pad(d.getDate())}-${pad(d.getHours())}${pad(d.getMinutes())}`;
+  const fname = `TSLV-backup-${stamp}.json`;
+  const email = fbAuth?.currentUser?.email || "";
+  openSheet(`<h2>データとアカウント</h2>
+    <p class="note">全データ（${data.items.length}件・ジャンル・フォルダ・プロジェクト・説明文を含む）を1つのファイルにまとめます。定期的なバックアップに使ってください。</p>
+    <div class="stats" style="margin-top:0;grid-template-columns:repeat(4,minmax(0,1fr))">
+      ${["task","stock","log","vision"].map(b=>`<div class="stat"><div class="k">${BOXES[b].name}</div><div class="v" style="font-size:24px">${n(b)}</div></div>`).join("")}
+    </div>
+    <div class="actions"><button class="btn grow" id="exSave">ファイルに保存（.json）</button><button class="btn ghost" id="exCopy">コピー</button></div>
+    <p class="note" id="exMsg"></p>
+    <div class="actions"><button class="btn ghost grow" id="exImport">バックアップ・以前のTSLVから読み込む</button></div>
+    ${email ? `<p class="note">ログイン中：${esc(email)}</p><div class="actions"><button class="btn danger" id="exLogout">ログアウト</button></div>` : ""}
+    <div class="actions"><button class="btn ghost grow" data-close2>閉じる</button></div>`, sh => {
+    const msg = sh.querySelector("#exMsg");
+    sh.querySelector("[data-close2]").onclick = closeSheet;
+    sh.querySelector("#exImport").onclick = importDataSheet;
+    const lo = sh.querySelector("#exLogout"); if(lo) lo.onclick = async () => { closeSheet(); await signOut(fbAuth); };
+    sh.querySelector("#exSave").onclick = async () => {
+      const file = new File([json], fname, {type:"application/json"});
+      try{
+        // iPhoneは共有メニュー（「ファイル」に保存など）、それ以外は通常のダウンロード
+        if(IS_TOUCH && navigator.canShare && navigator.canShare({files:[file]})){ await navigator.share({files:[file], title:fname}); msg.textContent = "共有メニューから保存しました。"; return; }
+        const url = URL.createObjectURL(file); const el = document.createElement("a"); el.href = url; el.download = fname; document.body.appendChild(el); el.click(); el.remove(); setTimeout(()=>URL.revokeObjectURL(url), 4000);
+        msg.textContent = `「${fname}」を保存しました。`;
+      }catch(e){ if(e?.name!=="AbortError") msg.textContent = "保存できませんでした。「コピー」を使ってください。"; }
+    };
+    sh.querySelector("#exCopy").onclick = () => {
+      navigator.clipboard.writeText(json).then(() => { msg.textContent = `コピーしました（${data.items.length}件）。`; })
+        .catch(() => { msg.textContent = "コピーできませんでした。「ファイルに保存」を使ってください。"; });
+    };
+  });
+}
+// 書き出したデータ（このアプリ・Claude上の旧TSLVどちらでも）を読み込む
+function importDataSheet(){
+  openSheet(`<h2>データを読み込む</h2>
+    <p class="note">旧TSLVの「書き出し」でコピーした内容を貼り付けるか、保存したファイル（.json）を選んでください。同じ項目がすでにある場合は、読み込む内容で上書きします。ジャンル・フォルダ・プロジェクトの設定も置き換わります。</p>
+    <div class="field"><label for="imJson">貼り付け</label><textarea id="imJson" style="min-height:140px;font-family:var(--f-mono);font-size:12px" placeholder='{"app":"TSLV", ...}'></textarea></div>
+    <div class="field"><label for="imFile">またはファイルを選ぶ</label><input id="imFile" type="file" accept=".json,application/json"></div>
+    <p class="note" id="imMsg"></p>
+    <div class="actions"><button class="btn grow" id="imGo">読み込む</button><button class="btn ghost" data-close2>閉じる</button></div>`, sh => {
+    const ta = sh.querySelector("#imJson"), msg = sh.querySelector("#imMsg"), go = sh.querySelector("#imGo");
+    sh.querySelector("[data-close2]").onclick = closeSheet;
+    const parse = () => { try{ const o = JSON.parse(ta.value); if(o?.app!=="TSLV" || !Array.isArray(o.items)) throw 0; return o; }catch(e){ return null; } };
+    const preview = () => { const o = parse(); msg.textContent = !ta.value.trim() ? "" : o ? `${o.items.length}件を読み込めます（${o.exportedAt ? new Date(o.exportedAt).toLocaleString("ja-JP") : "日時不明"}に書き出したデータ）` : "TSLVの書き出しデータではないようです。全体をコピーできているか確認してください。"; };
+    ta.addEventListener("input", preview);
+    sh.querySelector("#imFile").onchange = async e => { const f = e.target.files[0]; if(!f) return; ta.value = await f.text(); preview(); };
+    go.onclick = async () => {
+      const o = parse(); if(!o){ preview(); return; }
+      go.disabled = true; go.textContent = "読み込み中…";
+      try{
+        const items = o.items.filter(i=>i && i.id && i.box).map(i=>normItem(i));
+        S.meta = normMeta(o.meta || {});
+        if(S.mode==="db"){
+          await col.setMany([...items.map(i=>[i.id, i]), ["meta", structuredClone(S.meta)]]);
+        } else { items.forEach(i=>S.items.set(i.id,i)); lsSave(); }
+        closeSheet(); render(); toast(`${items.length}件を読み込みました`);
+      }catch(e){ msg.textContent = "読み込みに失敗しました。通信状況を確認して、もう一度試してください。"; go.disabled = false; go.textContent = "読み込む"; }
+    };
+  });
+}
+document.querySelectorAll("[data-due]").forEach(b => b.onclick = () => { S.newDue = b.dataset.due; render(); });
+
+$("#composer").onsubmit = e => {
+  e.preventDefault();
+  const text = $("#q").value.trim(); if(!text) return;
+  if(S.box==="task" && S.view==="pj" && !S.pjOpen){
+    const p = {id:uid(), name:text, archived:false, createdAt:Date.now()}; S.meta.projects.push(p); persistMeta();
+    S.pjOpen = p.id; toast("作成しました。下の入力欄から工程を追加できます");
+  } else if(S.box==="task" && S.view==="pj"){
+    persistItem(newItem(text, {box:"task", projectId:S.pjOpen, person:$("#qPerson").value.trim(), due:S.newDue==="today"?today():""}));
+  } else if(S.box==="task"){
+    const ex = {box:"task", person:$("#qPerson").value.trim(), due:S.newDue==="today"?today():""};
+    const cg = curGenre(); if(cg) ex.genre = cg;
+    if(S.view==="wait"){ ex.wait = true; ex.followUp = addDays(null,3); }
+    persistItem(newItem(text, ex));
+    if(S.view==="today" && !ex.due && !ex.wait) toast("受信箱に追加しました");
+    if(S.view==="inbox" && ex.due) toast("今日やるに追加しました");
+  } else {
+    const url = (text.match(/https?:\/\/\S+/)||[])[0] || "";
+    const cg = curGenre();
+    persistItem(newItem(text, {box:S.box, url, genre: cg && cg!=="__none" ? cg : ""}));
+  }
+  $("#q").value = ""; $("#qPerson").value = ""; autoGrow($("#q"));
+  render();
+};
+
+$("#main").addEventListener("click", e => {
+  const v = e.target.closest("[data-view]"); if(v){ S.view = v.dataset.view; S.pjOpen = null; S.newDue = S.view==="today" ? "today" : "none"; saveUi(); render(); return; }
+  const g = e.target.closest("[data-genre]"); if(g){ if(S.box==="task" && S.view==="inbox") S.inboxGenre = g.dataset.genre; else if(S.box!=="task") S.noteGenre[S.box] = g.dataset.genre; else S.genre = g.dataset.genre || null; render(); return; }
+  const pjb = e.target.closest("[data-pj]"); if(pjb){ S.pjOpen = pjb.dataset.pj; S.newDue = "none"; render(); window.scrollTo({top:0}); return; }
+  const a = e.target.closest("[data-act]");
+  if(a && a.dataset.act==="genres") return genresSheet();
+  if(a && a.dataset.act==="migrate") return importDataSheet();
+  if(a && a.dataset.act==="pjback"){ S.pjOpen = null; return render(); }
+  if(a && (a.dataset.act==="pjrename"||a.dataset.act==="pjarchive")){
+    const p = S.meta.projects.find(x=>x.id===S.pjOpen); if(!p) return;
+    if(a.dataset.act==="pjarchive"){ p.archived = !p.archived; persistMeta(); toast(p.archived?"プロジェクトを閉じました":"進行中に戻しました"); render(); return; }
+    openSheet(`<h2>名前を変更</h2><div class="field"><label for="pjn">プロジェクト名</label><input id="pjn" value="${esc(p.name)}"></div><div class="actions"><button class="btn grow" id="pjs">保存</button><button class="btn ghost" data-close2>閉じる</button></div>`, sh=>{
+      sh.querySelector("[data-close2]").onclick = closeSheet;
+      sh.querySelector("#pjs").onclick = () => { const n = sh.querySelector("#pjn").value.trim(); if(n){ p.name = n; persistMeta(); } closeSheet(); render(); };
+    });
+    return;
+  }
+  rowAction(e);
+});
+$("#main").addEventListener("keydown", e => { if((e.key==="Enter"||e.key===" ") && e.target.matches("[data-person]")){ e.preventDefault(); personSheet(e.target.dataset.person); } });
+let searchT;
+$("#main").addEventListener("input", e => {
+  if(e.target.id!=="search") return;
+  clearTimeout(searchT); const v = e.target.value;
+  searchT = setTimeout(()=>{ S.search = v; const pos = e.target.selectionStart; render(); const s = $("#search"); if(s){ s.focus(); try{ s.setSelectionRange(pos,pos); }catch(_){} } }, 180);
+});
+
+function saveUi(){ try{ localStorage.setItem("tlsv.ui", JSON.stringify({box:S.box, view:S.view})); }catch(e){} }
+try{ const u = JSON.parse(localStorage.getItem("tlsv.ui")||"null"); if(u){ if(BOXES[u.box]) S.box = u.box; if(TASK_VIEWS.some(([k])=>k===u.view)) S.view = u.view; } }catch(e){}
+S.newDue = S.view==="today" ? "today" : "none";
+document.addEventListener("visibilitychange", () => { if(!document.hidden) render(); });
+
+// Enter＝送信／保存、⌘(Ctrl)+Enter＝改行。日本語変換中のEnterは無視。
+// スマホ（指で操作する端末）は⌘キーがないため、Enter＝改行のままにして送信はボタンで行う
+const IS_TOUCH = matchMedia("(pointer: coarse)").matches;
+function autoGrow(el){ el.style.height = "auto"; el.style.height = el.scrollHeight + 3 + "px"; }
+function enterKeys(el, onSubmit){
+  if(!el) return;
+  el.addEventListener("keydown", e => {
+    if(e.key!=="Enter" || e.isComposing || e.keyCode===229) return;
+    if(e.metaKey || e.ctrlKey){ e.preventDefault(); el.setRangeText("\n", el.selectionStart, el.selectionEnd, "end"); el.dispatchEvent(new Event("input", {bubbles:true})); return; }
+    if(e.shiftKey || IS_TOUCH) return;
+    e.preventDefault(); onSubmit();
+  });
+}
+enterKeys($("#q"), () => $("#composer").requestSubmit());
+$("#q").addEventListener("input", () => autoGrow($("#q")));
+
+initStore();
+})();
+</script>
+</body>
+</html>
