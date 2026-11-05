@@ -261,7 +261,9 @@ button{cursor:pointer;background:none;border:0;padding:0}
 .prepbtn{display:inline-flex;align-items:center;gap:6px;padding:7px 14px;border-radius:999px;border:1px solid var(--line);background:var(--surface);font-size:13px;font-weight:700}
 .prepbtn svg{width:15px;height:15px}
 .prepbtn[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);color:#fff}
-@media (max-width:999px){.prepbtn{display:none}.prepbtn.kbbtn{display:inline-flex}}
+@media (max-width:999px){.prepbtn{display:none}}
+/* 家計簿は別アプリに分けたので、収支ボタンは出さない */
+#btnKb{display:none!important}
 /* 収支（家計簿）：横長の画面は左に並べ、スマホは全画面で開く */
 #kb{display:none}
 body.kb #kb{display:flex;flex-direction:column;gap:12px;position:fixed;inset:0;z-index:30;background:var(--bg);padding:calc(10px + env(safe-area-inset-top,0px)) max(12px,env(safe-area-inset-right,0px)) env(safe-area-inset-bottom,0px) max(12px,env(safe-area-inset-left,0px))}
@@ -503,7 +505,16 @@ const FIREBASE_CONFIG = {
   appId: "1:762246445689:web:ff5d2162075e19e756f2a8"
 };
 
-if("serviceWorker" in navigator && !window.__TSLV_LOCAL) navigator.serviceWorker.register("./sw.js").catch(()=>{});
+if("serviceWorker" in navigator && !window.__TSLV_LOCAL){
+  navigator.serviceWorker.register("./sw.js").catch(()=>{});
+  // 新しい版が届いたら知らせる（押すとすぐ切り替わる）
+  navigator.serviceWorker.addEventListener("message", e => {
+    if(e.data?.type!=="tslv-updated" || document.getElementById("updBar")) return;
+    const b = document.createElement("button"); b.id = "updBar"; b.textContent = "新しい版があります（タップで更新）";
+    b.style.cssText = "position:fixed;left:50%;transform:translateX(-50%);top:calc(10px + env(safe-area-inset-top,0px));z-index:70;padding:9px 16px;border-radius:999px;background:var(--ink);color:var(--bg);font-weight:700;font-size:13px;box-shadow:0 6px 18px rgb(0 0 0 / .2)";
+    b.onclick = () => location.reload(); document.body.appendChild(b);
+  });
+}
 
 (() => {
 "use strict";
@@ -621,19 +632,45 @@ async function initStore(){
   fbAuth = getAuth(app);
   try{ fbDb = initializeFirestore(app, {ignoreUndefinedProperties:true, localCache: persistentLocalCache({tabManager: persistentMultipleTabManager()})}); }
   catch(e){ fbDb = initializeFirestore(app, {ignoreUndefinedProperties:true}); }
-  setSync("ログイン確認中…");
-  onAuthStateChanged(fbAuth, user => { if(user) startData(user.uid); else showLogin(); });
+  // 前回ログインしていた人なら、ログイン確認を待たずに前回の内容をすぐ表示し、同期も始める
+  const last = quickLoad();
+  if(last){ startData(last); }
+  else setSync("ログイン確認中…");
+  onAuthStateChanged(fbAuth, user => {
+    if(user){ if(user.uid!==curUid) startData(user.uid); }
+    else showLogin();
+  });
+}
+// ---------- 起動を速くする：前回の内容をこの端末に控えておく ----------
+const QK = "tslv.quick.v1";
+let curUid = null, quickT = null;
+function quickLoad(){
+  try{
+    const o = JSON.parse(localStorage.getItem(QK)||"null");
+    if(!o || !o.uid) return null;
+    S.meta = normMeta(o.meta||{});
+    S.items = new Map((o.items||[]).map(i=>[i.id, normItem(i)]));
+    S.mode = "db"; render();
+    return o.uid;
+  }catch(e){ return null; }
+}
+function quickSave(){
+  clearTimeout(quickT);
+  quickT = setTimeout(() => { try{ localStorage.setItem(QK, JSON.stringify({uid:curUid, items:[...S.items.values()], meta:S.meta})); }catch(e){} }, 800);
 }
 function startData(uid){
-  $("#login").hidden = true;
+  $("#login").hidden = true; curUid = uid;
   const path = ["users", uid, "docs"];
   col = {
     doc: id => ({ set: d => setDoc(fsDoc(fbDb, ...path, id), d), delete: () => deleteDoc(fsDoc(fbDb, ...path, id)) }),
     setMany: async pairs => { for(let k=0; k<pairs.length; k+=400){ const bt = writeBatch(fbDb); pairs.slice(k,k+400).forEach(([id,d]) => bt.set(fsDoc(fbDb, ...path, id), d)); await bt.commit(); } }
   };
-  S.mode = "db"; S.items = new Map(); S.loaded = false;
+  // 控えから表示している内容は消さずに残し、Firebaseの中身が届いたら差し替える
+  S.mode = "db"; S.loaded = false;
   if(unsubData) unsubData();
   unsubData = onSnapshot(collection(fbDb, ...path), {includeMetadataChanges:true}, snap => {
+    // 端末の控えがあるのに、まだ空の仮データしか届いていないときは表示を変えない
+    if(snap.metadata.fromCache && snap.empty && S.items.size) return;
     const m = new Map(); let meta = null;
     snap.docs.forEach(d => { const x = d.data(); if(!x) return; if(d.id==="meta") meta = x; else m.set(d.id, normItem(x)); });
     if(meta) S.meta = normMeta(meta);
@@ -641,10 +678,12 @@ function startData(uid){
     const offline = snap.metadata.fromCache && !navigator.onLine;
     setSync(offline ? "オフライン · 電波が戻ると自動で同期します" : "同期済み", offline);
     if(!snap.metadata.fromCache){ if(!S.loaded && S.items.size) migrateMulti(); S.loaded = true; }
+    quickSave();
     render(); refreshSheet();
   }, err => setSync(err?.code==="permission-denied" ? "データを読めません。Firestoreのルール設定を確認してください" : "同期が止まりました。アプリを開き直してください", true));
 }
 function showLogin(){
+  curUid = null; try{ localStorage.removeItem(QK); }catch(e){}
   if(unsubData){ unsubData(); unsubData = null; }
   S.items = new Map(); S.loaded = false;
   $("#login").hidden = false; render();
