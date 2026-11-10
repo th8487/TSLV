@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="ja">
+<html lang="ja" class="apple">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
@@ -11,16 +11,15 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="TSLV">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
-<meta name="theme-color" content="#F0F1EC" media="(prefers-color-scheme: light)">
-<meta name="theme-color" content="#0F1013" media="(prefers-color-scheme: dark)">
+<meta name="theme-color" content="#F2F2F7" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#000000" media="(prefers-color-scheme: dark)">
 <style>
 :root{color-scheme:light;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
 body{margin:0;font-family:system-ui,-apple-system,sans-serif;font-size:14px;-webkit-text-size-adjust:100%}
 img{max-width:100%}
 [hidden]{display:none!important}
 </style>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&family=Zen+Kaku+Gothic+New:wght@400;500;700&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<!-- Apple風：システムフォント（SF Pro・ヒラギノ）を使うので、Webフォントは読み込まない -->
 <style>
 /* Layout: 片手操作のモバイル優先。上に共通のプロジェクトボタンと大きなタブ名、下に入力欄とタブバーを固定。箱ごとに色を変えて今どこに書いているか一目で分かるように */
 :root{
@@ -389,25 +388,263 @@ body{overscroll-behavior-y:none}
 .login .link{color:var(--muted);font-size:12px;text-decoration:underline;align-self:flex-start}
 .migrate{margin-top:16px;padding:16px;border-radius:var(--r);border:1px solid var(--accent);background:color-mix(in srgb,var(--accent) 8%,var(--surface));display:flex;flex-direction:column;gap:10px}
 .migrate b{font-size:15px}
+/* ===== デザイン修正（2026-11）：1 ダークの文字色／3 押した反応・ホバー整理・シート登場／4 タップ領域 ===== */
+/* 1. 塗りボタン上の文字色：ライトは白、ダークは黒（白だとコントラスト2.1〜2.8で読みにくい） */
+:root{--on-accent:#fff}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){--on-accent:#0F1013}}
+:root[data-theme="dark"]{--on-accent:#0F1013}
+.pjbtn[aria-pressed="true"],.due.on,.due.late,.due.wait,.kindseg button[aria-pressed="true"],.btn.danger.armed,.actions .btn.danger.armed,.c1 button,.toggle2 button[aria-pressed="true"],.seg button[aria-pressed="true"],.btn:not(.ghost):not(.danger),.prepbtn[aria-pressed="true"],.modeseg button[aria-pressed="true"],.selbox svg{color:var(--on-accent)}
+
+/* 3. 押した反応：押した瞬間に少し縮む（100〜160ms、強めのease-out） */
+button,a,[role="button"],.tab{touch-action:manipulation}
+button{transition:transform .16s cubic-bezier(.23,1,.32,1),background-color .15s,border-color .15s,color .15s}
+button:active{transform:scale(.97)}
+.check{transition:background .15s,border-color .15s,transform .16s cubic-bezier(.23,1,.32,1)}
+.check:active,.selbox:active{transform:scale(.86)}
+.pj:active,.sheetacts .btn:active,.btn.grow:active{transform:scale(.985)}
+.row:has(>.body:active),.grp:active{background:color-mix(in srgb,var(--ink) 5%,var(--surface))}
+.row,.grp{transition:background-color .12s}
+/* 3. ホバー表示はマウス操作のときだけ（タップ後に色が残らないように） */
+@media (hover:none){
+  .check:hover{border-color:var(--muted)}
+  .row.done .check:hover{border-color:var(--ok)}
+  .mini:hover{background:none}
+  .achip button:hover{opacity:.7;background:none}
+}
+/* 3. シートは下からすっと出る（たまに使う操作なので動きを付ける）。トーストもふわっと */
+@keyframes tslvSheetIn{from{transform:translateY(100%)}}
+@keyframes tslvFadeIn{from{opacity:0}}
+@keyframes tslvToastIn{from{opacity:0;translate:0 8px}}
+.sheet.enter{animation:tslvSheetIn .38s cubic-bezier(.32,.72,0,1)}
+.scrim.enter{animation:tslvFadeIn .25s ease-out}
+.toast{animation:tslvToastIn .2s cubic-bezier(.23,1,.32,1)}
+
+/* 4. タップ領域：見た目はそのまま、押せる範囲だけ約44pxに広げる */
+.check,.selbox,.mini,.iconbtn,.achip button{position:relative}
+.check::after,.selbox::after{content:"";position:absolute;inset:-11px}
+.mini::after{content:"";position:absolute;inset:-7px}
+.order .mini::after{inset:-3px -9px}
+.iconbtn::after{content:"";position:absolute;inset:-4px}
+.achip button::after{content:"";position:absolute;inset:-8px}
+/* ===== /デザイン修正 ===== */
+/* ===== デザイン見直し（全部入り）：②行のボタンをスワイプへ ⑤上下の圧迫を軽く ＋全体の整え ===== */
+/* ② スマホ：行を左にスワイプすると「明日やる／受信箱」などが出る（ネイティブのスクロールで動かすので軽い） */
+@media (pointer:coarse){
+  .v2 .row.swr{padding:0;gap:0;align-items:stretch;overflow-x:auto;overflow-y:hidden;scroll-snap-type:x mandatory;scrollbar-width:none;overscroll-behavior-x:contain}
+  .v2 .row.swr::-webkit-scrollbar{display:none}
+  .v2 .row.swr .rm{flex:0 0 100%;min-width:0;display:flex;align-items:center;gap:12px;padding:12px 14px;scroll-snap-align:start}
+  .v2 .row.swr .ra{flex:none;display:flex;scroll-snap-align:end}
+  .v2 .ra .btns{display:flex;flex-direction:row!important;gap:0}
+  .v2 .ra .due{height:100%;min-width:88px;padding:0 14px;border:0;border-radius:0;font-size:13px;display:grid;place-items:center;background:var(--surface-2);color:var(--ink)}
+  .v2 .ra .btns .due:first-child,.v2 .ra>.due.on{background:var(--accent);color:var(--on-accent)}
+  .v2 .ra .due.wait{background:var(--log);color:var(--on-accent)}
+  .v2 .ra .due:active{transform:none;filter:brightness(.9)}
+  .v2 .rm:has(>.body:active){background:color-mix(in srgb,var(--ink) 5%,var(--surface))}
+  .v2 .swhint{display:flex}
+}
+@media not (pointer:coarse){ .v2 .row.swr .rm{display:contents} .v2 .row.swr .ra{display:contents} }
+.swhint{display:none;align-items:center;gap:6px;margin:14px 2px -8px;font-size:12px;color:var(--muted)}
+.swhint svg{width:14px;height:14px}
+
+/* ⑤ 上：たまにしか使わない「書き出し」「取り込み」を「…」にまとめる */
+#btnMore{display:none}
+.v2 #btnMore{display:grid}
+.v2 #btnExport,.v2 #btnImport{display:none}
+/* ⑤ 下：フォルダ欄と今日/未定は、入力中だけ出す（ふだんは入力欄1行＋タブだけ） */
+.v2 .composer:not(.open) .c2{display:none}
+.v2 .composer{padding:8px 0 4px}
+.v2 .tabs{padding:0 0 6px}
+.v2 .tab{padding:5px 0}
+
+/* 全体：表示の切り替えを1本のスイッチに（4つの箱ボタンより静かに） */
+.v2 .views{gap:2px;padding:3px;border-radius:12px;background:var(--surface-2)}
+.v2 .view{border:0;background:none;border-radius:9px;font-size:13px;color:var(--muted);padding:8px 2px}
+.v2 .view[aria-pressed="true"]{background:var(--surface);color:var(--ink);box-shadow:0 1px 3px rgb(0 0 0 / .12),0 0 0 1px var(--line)}
+.v2 .view[aria-pressed="true"] .n{color:var(--accent);opacity:1;font-weight:700}
+/* 全体：文字は11px未満を使わない／見出しを少しだけ大きく */
+.v2 .sh h3{font-size:12px;letter-spacing:.1em}
+.v2 .tab span,.v2 .pj .kind,.v2 .pj .na b,.v2 .tag,.v2 .barlab{font-size:11px}
+.v2 .txt{font-size:15.5px;line-height:1.5}
+.v2 .meta{font-size:12.5px}
+/* 全体：完了チェックを少し大きく、行の上下にゆとり */
+.v2 .check{width:24px;height:24px}
+.v2 .section{margin-top:24px}
+.v2 .grp{padding-block:14px}
+.v2 .list{border-radius:12px}
+/* ===== /デザイン見直し ===== */
+/* ===== 追加修正（v3）===== */
+/* 1. スマホのキーボード：入力欄をキーボードのすぐ上に出す（--kb はキーボードの高さ） */
+.dock{bottom:var(--kb,0px)}
+.sheet{bottom:var(--kb,0px);max-height:calc(88vh - var(--kb,0px))}
+body.typing .tabs{display:none}
+body.typing.kbup .dock{padding-bottom:6px}
+/* 2. Stock・Log・Vision の入力欄は最初から3行分 */
+/* 2. Stock・Log の編集：タイトル2行・メモ4行を上に大きく、ジャンルとリンクは下に1行で */
+.sheet textarea.t2{min-height:calc(2 * 1.55em + 24px);line-height:1.55;resize:none}
+.sheet textarea.t4{min-height:calc(4 * 1.55em + 24px);line-height:1.55}
+.mini2{display:grid;grid-template-columns:minmax(0,2fr) minmax(0,3fr);gap:8px}
+.mini2 select,.mini2 input{min-width:0;padding:7px 10px;border-radius:9px;border:1px solid var(--line);background:var(--bg);font-size:13px;color:var(--ink)}
+/* 3. 上部：箱の名前の下に説明を固定（どの画面でも同じ位置） */
+.title{flex-direction:column;align-items:flex-start;gap:6px}
+.title small{display:block;line-height:1.3}
+.selacts .btn.danger{color:var(--danger)}
+/* ===== /追加修正 ===== */
+/* ===== 追加修正（v4）===== */
+/* 1. Stock・Log・Vision：タイトルの下にメモ本文を小さく・薄く表示（3行まで） */
+.npre{font-size:13px;line-height:1.5;color:var(--muted);margin-top:3px;white-space:pre-wrap;word-break:break-word;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
+/* 2. 入力欄を押した瞬間はキーボードに隠れない位置に置き（ページの引き上げを防ぐ）、キーボードが出たら下からせり出す */
+/* 2. 入力中：iPhoneが入力欄をキーボードの上へ持ち上げる動きはそのまま使い、背景は隠して「動いて見えない」ようにする。
+      入力欄（タイトル）を一番下に置き、フォルダ・今日/未定はその上に並べる（キーボードの上に全部見える並び） */
+body.typing .wrap{visibility:hidden}
+body.typing .composer .c2{order:1}
+body.typing .composer .c1{order:2}
+/* ===== /追加修正 ===== */
+/* ===== Apple純正風（html.apple）：iOSのシステムカラー・書体・部品の形に寄せる ===== */
+html.apple{
+  --bg:#F2F2F7; --surface:#FFFFFF; --surface-2:#E9E9EE; --ink:#000000; --muted:#8A8A8E; --line:rgba(60,60,67,.18);
+  --task:#007AFF; --log:#FF9500; --stock:#34C759; --vision:#AF52DE; --danger:#FF3B30; --ok:#34C759;
+  --f-display:-apple-system,"SF Pro Display","Hiragino Sans",system-ui,sans-serif;
+  --f-body:-apple-system,"SF Pro Text","Hiragino Sans","Hiragino Kaku Gothic ProN",system-ui,sans-serif;
+  --f-mono:-apple-system,"SF Pro Text","Hiragino Sans",system-ui,sans-serif;
+  --r:12px; --on-accent:#fff;
+}
+@media (prefers-color-scheme: dark){html.apple:not([data-theme="light"]){
+  --bg:#000000; --surface:#1C1C1E; --surface-2:#2C2C2E; --ink:#FFFFFF; --muted:#8D8D93; --line:rgba(84,84,88,.55);
+  --task:#0A84FF; --log:#FF9F0A; --stock:#30D158; --vision:#BF5AF2; --danger:#FF453A; --ok:#30D158; --on-accent:#fff}}
+html.apple[data-theme="dark"]{
+  --bg:#000000; --surface:#1C1C1E; --surface-2:#2C2C2E; --ink:#FFFFFF; --muted:#8D8D93; --line:rgba(84,84,88,.55);
+  --task:#0A84FF; --log:#FF9F0A; --stock:#30D158; --vision:#BF5AF2; --danger:#FF453A; --ok:#30D158; --on-accent:#fff}
+html.apple body{font-size:17px;letter-spacing:-.01em;-webkit-font-smoothing:antialiased}
+/* 見出し：iOSの大きなタイトル（34pt・太字）と、その下の説明 */
+.apple .date{font-size:13px;letter-spacing:0;font-variant-numeric:tabular-nums}
+.apple .title{font-size:34px;font-weight:700;letter-spacing:.01em;line-height:1.12;color:var(--ink)}
+.apple .title small{font-size:15px;font-weight:400;color:var(--muted)}
+.apple .iconbtn{width:34px;height:34px;border:0;background:color-mix(in srgb,var(--accent) 12%,transparent);color:var(--accent)}
+.apple .iconbtn[aria-pressed="true"]{background:var(--accent);color:var(--on-accent)}
+.apple .prepbtn{border:0;background:color-mix(in srgb,var(--accent) 12%,transparent);color:var(--accent);font-weight:600}
+/* 切り替え：iOSのセグメント */
+.apple .views{background:rgba(118,118,128,.12);border-radius:9px;padding:2px}
+.apple .view{border-radius:7px;font-size:13px;font-weight:500;color:var(--ink)}
+.apple .view[aria-pressed="true"]{background:var(--surface);box-shadow:0 3px 8px rgb(0 0 0 / .12),0 3px 1px rgb(0 0 0 / .04);font-weight:600}
+@media (prefers-color-scheme: dark){html.apple:not([data-theme="light"]) .view[aria-pressed="true"]{background:#636366}}
+.apple .chip{border-radius:999px;padding:5px 12px;font-size:13px;background:rgba(118,118,128,.12);color:var(--ink)}
+.apple .chip[aria-pressed="true"]{background:var(--accent);color:var(--on-accent);font-weight:600}
+.apple .search{border:0;background:rgba(118,118,128,.12);border-radius:10px;padding:8px 12px}
+/* リスト：iOSの「角丸のグループ」＋左を空けた区切り線 */
+.apple .sh{padding:0 16px;margin-bottom:6px}
+.apple .sh h3{font-size:13px;font-weight:400;letter-spacing:0;color:var(--muted)}
+.apple .sh span{font-size:13px}
+.apple .list{border:0;border-radius:12px}
+.apple .row{border-top:0;padding:11px 16px}
+.apple .row+.row::before,.apple .rm::before{content:none}
+.apple .row+.row{box-shadow:inset 52px 1px 0 -0px var(--surface),inset 0 1px 0 var(--line)}
+.apple .row.overdue{box-shadow:inset 3px 0 0 var(--danger)}
+.apple .row+.row.overdue{box-shadow:inset 3px 0 0 var(--danger),inset 52px 1px 0 var(--surface),inset 0 1px 0 var(--line)}
+.apple .txt{font-size:17px;line-height:1.35}
+.apple .meta{font-size:13px}
+.apple .npre{font-size:15px;line-height:1.35;color:var(--muted)}
+.apple .check{width:24px;height:24px;border:1.5px solid #C7C7CC}
+.apple .row.done .check{background:var(--accent);border-color:var(--accent)}
+.apple .dot{width:10px;height:10px;border-radius:50%;margin-top:7px}
+.apple .grp .gt{font-weight:600}
+.apple .due{border:0;background:rgba(118,118,128,.12);color:var(--ink);font-weight:600}
+.apple .tag{border-radius:6px}
+/* ボタン・入力欄 */
+.apple .btn{border-radius:12px;font-weight:600;padding:13px 16px}
+.apple .btn.ghost{border:0;background:rgba(118,118,128,.12);color:var(--accent)}
+.apple .btn.danger{border:0;background:rgba(118,118,128,.12)}
+.apple .field>label,.apple .field>.lab{font-size:13px;font-weight:400;letter-spacing:0;color:var(--muted);padding-left:4px}
+.apple .field input,.apple .field select,.apple .field textarea,.apple .mini2 select,.apple .mini2 input{border:0;background:rgba(118,118,128,.12);border-radius:10px}
+.apple .c1 textarea{border:0;background:var(--surface);border-radius:18px;padding:9px 14px;box-shadow:inset 0 0 0 1px var(--line)}
+.apple .c1 button{width:36px;height:36px;border-radius:50%;align-self:flex-end;margin-bottom:3px}
+.apple .c2 input{border:0;background:var(--surface);box-shadow:inset 0 0 0 1px var(--line);border-radius:10px}
+.apple .toggle2{border:0;background:rgba(118,118,128,.12);border-radius:9px;padding:2px}
+.apple .toggle2 button{border-radius:7px;color:var(--ink);font-weight:500}
+.apple .toggle2 button[aria-pressed="true"]{background:var(--surface);color:var(--ink);box-shadow:0 3px 8px rgb(0 0 0 / .12)}
+/* 下のバー：半透明の素材＋選択中は色だけで示す（iOSのタブバー） */
+.apple .dock{background:color-mix(in srgb,var(--bg) 78%,transparent);backdrop-filter:saturate(180%) blur(20px);-webkit-backdrop-filter:saturate(180%) blur(20px);border-top:.5px solid var(--line)}
+.apple .tab{color:#999}
+.apple .tab b{font-family:var(--f-display);font-weight:700;font-size:21px}
+.apple .tab span{font-size:10px;font-weight:500}
+.apple .tab[aria-selected="true"]{background:none;color:var(--c)}
+/* シート：上に「つまみ」 */
+.apple .sheet{border-radius:12px 12px 0 0;padding-top:22px}
+.apple .sheet::before{content:"";position:absolute;top:6px;left:50%;width:36px;height:5px;margin-left:-18px;border-radius:3px;background:rgba(127,127,127,.4)}
+.apple .sheet h2{font-family:var(--f-display);font-weight:700;font-size:22px;letter-spacing:0}
+.apple .toast{border-radius:14px}
+/* ===== /Apple純正風 ===== */
+/* ===== v7：見出しを消して画面を広く／LSVはメモ帳のような全画面入力／23時の振り返り ===== */
+.wrap{padding-block:6px 200px}
+.topbar{position:relative;min-height:36px}
+.head{position:absolute;top:6px;right:max(16px,env(safe-area-inset-right,0px));margin:0;z-index:5}
+.wrap{position:relative}
+.headbtns{gap:8px}
+#btnDone{display:none!important}
+.topbar+.head+.sync+main>.views:first-child,.topbar+.head+.sync+main>:first-child{margin-top:4px}
+main{padding-right:0}
+.donehead{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-top:4px;padding-right:84px}
+.donehead h2{margin:0;font-size:28px;font-weight:700;letter-spacing:.01em}
+/* 右上の2つのボタンと重ならないよう、最初の行だけ右を空ける */
+main>.views:first-child,main>.genres:first-child,main>.nsearch:first-child{margin-right:84px}
+.nsearch{margin-top:2px!important}
+/* 入力ボタン（Stock・Log・Vision）：右下の丸ボタン */
+.dock-in{position:relative}
+.fab{position:absolute;right:0;top:-72px;width:58px;height:58px;border-radius:50%;background:var(--accent);color:var(--on-accent);display:grid;place-items:center;box-shadow:0 8px 22px rgb(0 0 0 / .22),0 2px 6px rgb(0 0 0 / .12)}
+.fab svg{width:26px;height:26px}
+/* メモ帳のような全画面入力 */
+.ned{position:fixed;left:0;right:0;top:0;bottom:var(--kb,0px);z-index:65;background:var(--surface);display:flex;flex-direction:column;padding:calc(env(safe-area-inset-top,0px) + 6px) max(16px,env(safe-area-inset-right,0px)) 10px max(16px,env(safe-area-inset-left,0px));animation:tslvSheetIn .32s cubic-bezier(.32,.72,0,1)}
+.ned-in{flex:1;min-height:0;width:100%;max-width:720px;margin:0 auto;display:flex;flex-direction:column}
+.ned-bar{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:4px 0 6px}
+.ned-r{display:flex;align-items:center;gap:10px}
+.ned-save{padding:8px 18px!important;border-radius:999px!important;font-size:15px}
+.ned-x{width:36px;height:36px;border-radius:50%;background:rgba(118,118,128,.14);color:var(--ink);display:grid;place-items:center}
+.ned-x svg{width:16px;height:16px}
+.ned-del{color:var(--danger);font-weight:600;font-size:15px;padding:8px 2px}
+.ned-title{border:0;background:transparent;font-size:24px;font-weight:700;letter-spacing:.01em;padding:6px 0;outline:none;width:100%;color:var(--ink)}
+.ned-meta{display:flex;gap:8px;align-items:center;padding:2px 0 8px;border-bottom:.5px solid var(--line)}
+.ned-meta select,.ned-meta input{min-width:0;border:0;background:rgba(118,118,128,.12);border-radius:8px;padding:5px 10px;font-size:13px!important;color:var(--ink)}
+.ned-meta input{flex:1}
+.ned-body{flex:1;min-height:0;border:0;background:transparent;resize:none;font-size:17px;line-height:1.6;padding:10px 0;outline:none;width:100%;color:var(--ink)}
+body.editing{overflow:hidden}
+/* タスクの編集：メモを大きく、保存と削除を一番下に並べる */
+.sheet textarea.tnote{min-height:180px}
+.eacts{display:grid;grid-template-columns:minmax(0,2fr) minmax(0,1fr);gap:8px;margin-top:4px}
+.eacts .btn.danger{color:var(--danger)}
+/* 23時の振り返り */
+.rv-hero{display:flex;flex-direction:column;gap:4px;padding:4px 0 2px}
+.rv-hero h2{font-size:24px!important}
+.rv-hero p{margin:0;color:var(--muted);font-size:15px}
+.rv-count{font-size:44px;font-weight:700;line-height:1.05;color:var(--accent);font-variant-numeric:tabular-nums}
+.rv-count small{font-size:15px;font-weight:500;color:var(--muted);margin-left:4px}
+.rv-done .row{padding-block:9px}
+.rv-done .ok{flex:none;width:22px;height:22px;border-radius:50%;background:var(--ok);color:#fff;display:grid;place-items:center}
+.rv-done .ok svg{width:12px;height:12px}
+.rv-left .row{padding-block:7px;cursor:pointer}
+.rv-left .txt{font-size:14px!important;color:var(--muted)}
+.rv-left .row.picked .txt{color:var(--ink)}
+.rv-left .selbox{width:20px;height:20px}
+.rv-acts{position:sticky;bottom:calc(-20px - env(safe-area-inset-bottom,0px));background:var(--surface);padding:10px 0 4px;display:flex;flex-direction:column;gap:8px}
+/* ===== /v7 ===== */
 @media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
 </style>
 
 </head>
-<body>
+<body class="v2">
 <div class="wrap">
   <div class="topbar">
-    <div class="date" id="date"></div>
+    <div class="date" id="date" hidden></div>
     <div class="topbtns">
       <button class="prepbtn kbbtn" id="btnKb" aria-pressed="false" title="家計簿を開く"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 4l5 7 5-7M6 12h12M6 16h12M12 11v9"/></svg>収支</button>
       <button class="prepbtn" id="btnPrep" aria-pressed="false" title="カレンダーとアラームを横に開く"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/></svg>準備</button>
     </div>
   </div>
+  <h1 class="title" id="title" hidden>Task</h1>
   <header class="head">
-    <h1 class="title" id="title">Task</h1>
     <div class="headbtns">
       <button class="iconbtn" id="btnDone" aria-label="成果を見る" title="成果"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></svg></button>
       <button class="iconbtn" id="btnExport" aria-label="データとアカウント" title="データとアカウント"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 15V3M7 8l5-5 5 5M5 21h14"/></svg></button>
       <button class="iconbtn" id="btnImport" aria-label="まとめて取り込む" title="まとめて取り込む"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12M7 10l5 5 5-5M5 21h14"/></svg></button>
+      <button class="iconbtn" id="btnMore" aria-label="そのほか（書き出し・取り込み）" title="そのほか"><svg viewBox="0 0 24 24" fill="currentColor"><circle cx="5" cy="12" r="1.9"/><circle cx="12" cy="12" r="1.9"/><circle cx="19" cy="12" r="1.9"/></svg></button>
       <button class="iconbtn" id="btnSelect" aria-pressed="false" aria-label="まとめて選択" title="まとめて選択"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="6" height="6" rx="1.5"/><path d="M4.8 7l1.2 1.2L8 6"/><rect x="3" y="14" width="6" height="6" rx="1.5"/><path d="M13 7h8M13 17h8"/></svg></button>
     </div>
   </header>
@@ -444,6 +681,7 @@ body{overscroll-behavior-y:none}
         <button type="button" class="btn ghost" id="selExit">やめる</button>
       </div>
     </div>
+    <button type="button" class="fab" id="fab" aria-label="新しく書く" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></button>
     <nav class="tabs" role="tablist">
       <button class="tab" role="tab" data-b="task"><b>T</b><span>Task</span></button>
       <button class="tab" role="tab" data-b="stock"><b>S</b><span>Stock</span></button>
@@ -492,6 +730,7 @@ body{overscroll-behavior-y:none}
 <div id="toastHost"></div>
 
 <script type="module">
+// デモ版：ログイン・同期は使わない（この端末だけで動く）
 import { initializeApp } from "./firebase-app.js";
 import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, signOut, sendPasswordResetEmail } from "./firebase-auth.js";
 import { initializeFirestore, persistentLocalCache, persistentMultipleTabManager, collection, doc as fsDoc, setDoc, deleteDoc, onSnapshot, writeBatch } from "./firebase-firestore.js";
@@ -593,7 +832,7 @@ function normMeta(m){
   // 初期の説明文：Taskの「Claude」ジャンル
   if(g.task.includes("Claude") && notes.task.Claude===undefined) notes.task.Claude = "進行中のチャットの管理用。まだ投げてない議題はstockへ。";
   const ts = {vision: Array.isArray(m?.titleSort?.vision) ? [...m.titleSort.vision] : ["将来のvision","選択肢の整理"]};
-  return {genres:g, projects:Array.isArray(m?.projects)?m.projects.map(p=>({...p})):[], taskDefault:td, genreNotes:notes, titleSort:ts, seeds:Array.isArray(m?.seeds)?[...m.seeds]:[], folderModes:{...(m?.folderModes||{})}, multi:Array.isArray(m?.multi)?m.multi.map(e=>({...e})):[]};
+  return {lastReview: Number(m?.lastReview)||0, genres:g, projects:Array.isArray(m?.projects)?m.projects.map(p=>({...p})):[], taskDefault:td, genreNotes:notes, titleSort:ts, seeds:Array.isArray(m?.seeds)?[...m.seeds]:[], folderModes:{...(m?.folderModes||{})}, multi:Array.isArray(m?.multi)?m.multi.map(e=>({...e})):[]};
 }
 function lsSave(){ if(S.mode!=="local") return; try{ localStorage.setItem(LS_KEY, JSON.stringify({items:[...S.items.values()], meta:S.meta})); }catch(e){} }
 function lsLoad(){ try{ const o = JSON.parse(localStorage.getItem(LS_KEY)||"null"); if(!o) return; if(o.meta) S.meta = normMeta(o.meta); (o.items||[]).forEach(i=>S.items.set(i.id,normItem(i))); }catch(e){} }
@@ -780,10 +1019,12 @@ function render(){
   const d = new Date(); $("#date").textContent = `${d.getFullYear()}.${pad(d.getMonth()+1)}.${pad(d.getDate())} ${WD[d.getDay()]}曜`;
   $("#btnDone").setAttribute("aria-pressed", String(S.screen==="done"));
   // まとめて選択：Taskの一覧（プロジェクト一覧以外）でだけ使える
-  const canSelect = S.screen==="main" && S.box==="task" && S.view!=="pj";
+  const canSelect = S.screen==="main" && !(S.box==="task" && S.view==="pj");
   if(!canSelect && S.selecting){ S.selecting = false; S.sel.clear(); }
   for(const id of [...S.sel]){ const x = S.items.get(id); if(!x || isDone(x)) S.sel.delete(id); }
-  $("#btnSelect").hidden = !canSelect;
+  $("#btnSelect").style.visibility = canSelect ? "" : "hidden";
+  $("#selDone").textContent = S.box==="task" ? "まとめて完了" : "まとめて削除";
+  $("#selDone").className = S.box==="task" ? "btn ghost" : "btn ghost danger";
   $("#btnSelect").setAttribute("aria-pressed", String(S.selecting));
   $("#selbar").hidden = !S.selecting;
   $("#selCount").textContent = S.sel.size;
@@ -799,13 +1040,52 @@ function render(){
   $("#c2").hidden = !(S.screen==="main" && S.box==="task") || pjList;
   $("#kindSeg").hidden = !pjList;
   document.querySelectorAll("[data-kind]").forEach(b=>b.setAttribute("aria-pressed", String(b.dataset.kind===S.multiKind)));
-  $("#composer").hidden = S.screen==="done" || S.selecting;
+  $("#composer").hidden = S.screen==="done" || S.selecting || S.box!=="task";
+  $("#fab").hidden = S.screen!=="main" || S.selecting || S.box==="task";
   document.querySelector(".tabs").hidden = S.selecting;
   $("#q").placeholder = pjList ? ({task:"同時に進めるタスク", folder:"新しいフォルダ名（人の名前など）", project:"新しいプロジェクト名"})[S.multiKind] : S.box==="task" ? (S.view==="wait" ? "依頼したこと（確認日は3日後）" : "タイトル") : `${BOXES[S.box].name} に1行で書き留める`;
   document.querySelectorAll("[data-due]").forEach(b=>b.setAttribute("aria-pressed", String(b.dataset.due===S.newDue)));
   $("#persons").innerHTML = persons().map(p=>`<option value="${esc(p)}">`).join("");
   const banner = (S.mode==="db" && S.loaded && S.items.size===0) ? `<div class="migrate"><b>以前のTSLVからデータを移しますか？</b><span class="note">Claude上のTSLVで「書き出し」→「コピー」した内容を貼り付けると、そのまま引き継げます。</span><button class="btn" data-act="migrate">データを読み込む</button></div>` : "";
   $("#main").innerHTML = banner + (S.screen==="done" ? renderDone() : (S.box==="task" ? renderTask() : renderNote()));
+  setTimeout(maybeReview, 0);
+}
+// ---------- 毎日23時の振り返り ----------
+// 23時を過ぎて最初に開いたとき：その日に終わったことを出し、やり残した「今日やる」を
+// 「明日も続ける」ものだけ残して、残りは受信箱に戻す。どの端末で済ませても1日1回だけ
+function lastBoundary(){ const d = new Date(); d.setMinutes(0,0,0); if(d.getHours() < 23) d.setDate(d.getDate()-1); d.setHours(23); return d.getTime(); }
+var reviewing = false;
+function maybeReview(){
+  if(reviewing || !S.loaded || S.selecting || !$("#overlay").hidden || document.querySelector(".ned") || document.body.classList.contains("typing")) return;
+  if(!$("#login").hidden) return;
+  const b = lastBoundary(); if((S.meta.lastReview||0) >= b) return;
+  const day = ymd(new Date(b)), from = b - 864e5;
+  const done = ofBox("task").filter(i=>isDone(i) && i.doneAt && i.doneAt > from && i.doneAt <= b).sort((x,y)=>x.doneAt-y.doneAt);
+  const left = openTasks().filter(i=>!i.wait && !inMultiTask(i) && i.due && i.due <= day).sort(byTitle);
+  if(!done.length && !left.length){ S.meta.lastReview = b; persistMeta(); return; }
+  reviewing = true; reviewSheet(b, day, done, left);
+}
+function reviewSheet(b, day, done, left){
+  const keep = new Set(), next = addDays(day, 1); let first = true;
+  const draw = () => { const re = !first; first = false; openSheet(`<div class="rv-hero"><p>${fmtDate(day)}</p><h2>今日も一日、おつかれさまでした</h2>
+      <div class="rv-count">${done.length}<small>件 終わらせました</small></div></div>
+    ${done.length ? `<div class="list rv-done">${done.map(i=>`<div class="row"><span class="ok">${ICON.check}</span><div class="body"><div class="txt">${esc(i.text)}</div>${i.person?`<div class="meta"><span class="person">@${esc(i.person)}</span></div>`:""}</div></div>`).join("")}</div>` : `<p class="note">今日は完了にしたタスクはありませんでした。</p>`}
+    ${left.length ? `<section class="section"><div class="sh"><h3>やり残したこと（${left.length}件）</h3><span><button type="button" class="sellink" id="rvAll">${keep.size===left.length?"選択を外す":"すべて選ぶ"}</button></span></div>
+      <p class="note" style="margin:0 0 8px">明日も続けるものを選んでください。選ばなかったものは受信箱に戻ります。</p>
+      <div class="list rv-left">${left.map(i=>`<div class="row t ${keep.has(i.id)?"picked":""}" data-keep="${i.id}" role="button" tabindex="0"><span class="selbox" aria-pressed="${keep.has(i.id)}">${ICON.check}</span><div class="body"><div class="txt">${esc(i.text)}</div></div></div>`).join("")}</div></section>` : ""}
+    <div class="rv-acts"><button class="btn" id="rvGo">${!left.length ? "明日もがんばる" : keep.size ? `${keep.size}件を明日も続ける（残りは受信箱へ）` : "すべて受信箱に戻す"}</button></div>`, sh => {
+    // 振り返りはボタンで終える（外側を押しても閉じない）
+    const sc = $("#overlay .scrim"); if(sc) sc.onclick = null;
+    sh.querySelectorAll("[data-keep]").forEach(r => r.onclick = () => { const id = r.dataset.keep; keep.has(id) ? keep.delete(id) : keep.add(id); draw(); });
+    const all = sh.querySelector("#rvAll"); if(all) all.onclick = () => { if(keep.size===left.length) keep.clear(); else left.forEach(i=>keep.add(i.id)); draw(); };
+    sh.querySelector("#rvGo").onclick = () => {
+      const prevs = left.map(i=>({...i}));
+      left.forEach(i => persistItem({...i, due: keep.has(i.id) ? next : "", updatedAt:Date.now()}));
+      S.meta.lastReview = b; persistMeta(); reviewing = false; closeSheet(); rerender();
+      if(left.length) toast(keep.size ? `${keep.size}件を明日も続けます。${left.length-keep.size}件は受信箱へ` : `${left.length}件を受信箱に戻しました`, () => { prevs.forEach(p=>persistItem(p)); rerender(); });
+    };
+  }, re ? draw : null); };
+  draw();
 }
 // 今日：ジャンルで絞らない／受信箱：「すべて」なしで必ずどれか1つ／それ以外：「すべて」あり
 function curGenre(){
@@ -879,6 +1159,7 @@ function renderTask(){
   if(S.view==="inbox") html += genreChips("task", open.filter(i=>inView(i,"inbox")), true);
   else if(S.view==="wait") html += genreChips("task");
   if(S.view==="pj") return html + renderProjects();
+  if(document.body.classList.contains("v2") && !S.selecting) html += `<p class="swhint"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M15 6l-6 6 6 6"/></svg>行を左にスワイプすると「明日やる」「受信箱」などが出ます</p>`;
   const list = filterGenre(open.filter(i=>inView(i,S.view)));
   if(S.view==="today"){
     const late = list.filter(i=>(i.due && i.due<today()) || (followLate(i) && !(i.due===today()))).sort(byDue);
@@ -937,13 +1218,14 @@ function rowTask(i, opts={}){
     else if(i.due===tomorrow()) dueBtn = `<button class="due on" data-act="toinbox" aria-label="明日やるを解除して${off}に戻す">明日</button>`;
     else dueBtn = `<div class="btns"><button class="due" data-act="totoday">${pickWord()}やる</button><button class="due" data-act="req">依頼完了</button></div>`;
   }
-  return `<div class="row t ${isDone(i)?"done":""} ${late?"overdue":""}" data-id="${i.id}">
+  const SW = document.body.classList.contains("v2") && !!dueBtn;
+  return `<div class="row t ${isDone(i)?"done":""} ${late?"overdue":""} ${SW?"swr":""}" data-id="${i.id}">${SW?'<div class="rm">':""}
     <button class="check" data-act="done" aria-label="${isDone(i)?"未完了に戻す":"完了にする"}">${ICON.check}</button>
     <div class="body" data-act="edit"><div class="txt">${esc(i.text)}</div>${meta.length?`<div class="meta">${meta.join("")}</div>`:""}</div>
     ${opts.inPj && !isDone(i) ? `<div class="order"><button class="mini" data-act="up" aria-label="上へ">${ICON.up}</button><button class="mini" data-act="down" aria-label="下へ">${ICON.down}</button></div>` : ""}
-    ${dueBtn}
+    ${SW ? "" : dueBtn}
     ${opts.multi ? `<button class="mini" data-act="unmulti" aria-label="後でやる（受信箱に戻す）" title="後でやる（受信箱に戻す）">✕</button>` : ""}
-  </div>`;
+  ${SW?`</div><div class="ra">${dueBtn}</div>`:""}</div>`;
 }
 
 function renderDone(){
@@ -954,7 +1236,7 @@ function renderDone(){
   const days = [...Array(14)].map((_,k)=>addDays(null,k-13));
   const per = days.map(d=>done.filter(i=>day(i)===d).length);
   const max = Math.max(1,...per);
-  let html = `<div class="stats">
+  let html = `<div class="donehead"><h2>集計</h2><button class="btn ghost" data-act="closedone" style="padding:7px 14px">閉じる</button></div><div class="stats">
     <div class="stat"><div class="k">今日</div><div class="v">${cT}</div><div class="s">件完了</div></div>
     <div class="stat"><div class="k">今週</div><div class="v">${cW}</div><div class="s">月曜から</div></div>
     <div class="stat"><div class="k">今月</div><div class="v">${cM}</div><div class="s">${Number(mo.slice(5))}月</div></div>
@@ -1082,8 +1364,7 @@ function renderNote(){
   if(box==="stock") list.sort(byTitle);
   else if(box==="vision" && S.meta.titleSort.vision.includes(curGenre())) list.sort((a,b)=>(b.pinned?1:0)-(a.pinned?1:0) || byTitle(a,b));
   else list.sort((a,b)=>(b.pinned?1:0)-(a.pinned?1:0) || b.createdAt-a.createdAt);
-  let html = genreChips(box, null, true);
-  if(box!=="log") html += `<input class="search" id="search" type="search" placeholder="${box==="stock"?"キーワードで引き出す":"検索"}" value="${esc(S.search)}" aria-label="検索">`;
+  let html = `<input class="search nsearch" id="search" type="search" placeholder="${box==="stock"?"キーワードで引き出す":"検索"}" value="${esc(S.search)}" aria-label="検索">` + genreChips(box, null, true);
   if(!list.length) return html + emptyBox(S.search?"見つかりませんでした":`${BOXES[box].name} はまだ空です`, S.search?"別のキーワードで試してください":({log:"学びや疑問を1行で。書くこと自体が目的なので、整える必要はありません",stock:"アイデア・行きたい店・ノウハウ・事例リンクを入れておき、必要なときに検索で引き出します",vision:"理想の家やオフィス、方針・決意。ピン留めすると常に上に表示されます"})[box]);
   if(box==="log"){
     const g = {}; list.forEach(i=>{ (g[ymd(new Date(i.createdAt))] ||= []).push(i); });
@@ -1099,10 +1380,16 @@ function rowNote(i){
   const meta = [];
   if(i.genre) meta.push(`<span class="tag">${esc(i.genre)}</span>`);
   if(i.url) meta.push(`<a href="${esc(i.url)}" target="_blank" rel="noopener">${esc(i.url.replace(/^https?:\/\//,""))}</a>`);
-  if(i.note) meta.push(`<span>メモあり</span>`);
   if(i.box!=="log"){ const d = new Date(i.createdAt); meta.push(`<span>${d.getMonth()+1}/${d.getDate()}</span>`); }
+  if(S.selecting){
+    const on = S.sel.has(i.id);
+    return `<div class="row ${on?"picked":""}" data-id="${i.id}">
+      <button class="selbox" data-act="sel" aria-pressed="${on}" aria-label="選択">${ICON.check}</button>
+      <div class="body" data-act="sel"><div class="txt">${esc(i.text)}</div>${i.note?`<div class="npre">${esc(i.note)}</div>`:""}${meta.length?`<div class="meta">${meta.join("")}</div>`:""}</div>
+    </div>`;
+  }
   return `<div class="row" data-id="${i.id}"><i class="dot"></i>
-    <div class="body" data-act="${i.box==="vision"?"view":"edit"}"><div class="txt">${esc(i.text)}</div>${meta.length?`<div class="meta">${meta.join("")}</div>`:""}</div>
+    <div class="body" data-act="${i.box==="vision"?"view":"edit"}"><div class="txt">${esc(i.text)}</div>${i.note?`<div class="npre">${esc(i.note)}</div>`:""}${meta.length?`<div class="meta">${meta.join("")}</div>`:""}</div>
     ${i.box==="vision"?`<button class="mini" data-act="pin" aria-pressed="${!!i.pinned}" aria-label="ピン留め">${ICON.pin}</button>`:""}
   </div>`;
 }
@@ -1115,13 +1402,14 @@ function openSheet(html, onMount, redraw){
   o.innerHTML = `<div class="scrim" data-close></div><div class="sheet" role="dialog" aria-modal="true"><div class="sheet-in">${html}</div></div>`;
   o.querySelector("[data-close]").onclick = closeSheet;
   const sh = o.querySelector(".sheet");
+  if(!redraw){ sh.classList.add("enter"); o.querySelector(".scrim").classList.add("enter"); }
   if(redraw) sh.scrollTop = prevScroll;
   sheetRedraw = redraw || null;
   onMount && onMount(sh);
 }
-function closeSheet(){ const o = $("#overlay"); o.hidden = true; o.innerHTML = ""; sheetRedraw = null; }
+function closeSheet(){ if(reviewing){ reviewing = false; setTimeout(maybeReview, 400); } const o = $("#overlay"); o.hidden = true; o.innerHTML = ""; sheetRedraw = null; }
 function refreshSheet(){ if(sheetRedraw) sheetRedraw(); }
-document.addEventListener("keydown", e => { if(e.key==="Escape" && !$("#overlay").hidden) closeSheet(); });
+document.addEventListener("keydown", e => { if(e.key==="Escape" && !$("#overlay").hidden && !reviewing) closeSheet(); });
 
 // 連携タスク一覧
 // フォルダ（相手）の名前を一括変更。既にある名前にすると1つのフォルダにまとまる
@@ -1205,12 +1493,14 @@ function editSheet(id, back){
   const it0 = S.items.get(id); if(!it0) return;
   const it = {...it0};
   const draw = () => {
-    const isT = it.box==="task";
+    const isT = it.box==="task", isSL = it.box==="stock" || it.box==="log" || it.box==="vision";
     const gs = S.meta.genres[it.box];
     const dueMode = !it.due ? "none" : it.due===today() ? "today" : "date";
     openSheet(`
       <h2>編集</h2>
-      <div class="field"><label for="e_text">タイトル</label><textarea id="e_text" style="min-height:56px">${esc(it.text)}</textarea></div>
+      <div class="field"><label for="e_text">タイトル</label><textarea id="e_text" ${isSL?'class="t2" rows="2"':'style="min-height:56px"'}>${esc(it.text)}</textarea></div>
+      ${isSL?`<div class="field"><label for="e_note">メモ</label><textarea id="e_note" class="t4" rows="4" placeholder="補足・経緯など">${esc(it.note)}</textarea></div>
+      <div class="mini2"><select id="e_genre" aria-label="ジャンル"><option value="">ジャンルなし</option>${gs.map(g=>`<option ${it.genre===g?"selected":""}>${esc(g)}</option>`).join("")}${it.genre&&!gs.includes(it.genre)?`<option selected>${esc(it.genre)}</option>`:""}</select><input id="e_url" type="url" value="${esc(it.url)}" placeholder="リンク（https://）" aria-label="リンク"></div>`:""}
       ${isT?`
       <div class="grid2">
         <div class="field"><label for="e_person">フォルダ</label><input id="e_person" value="${esc(it.person)}" placeholder="任意" list="persons"></div>
@@ -1221,13 +1511,12 @@ function editSheet(id, back){
         <button data-setdue="none" aria-pressed="${dueMode==="none"}">未定</button>
         <input type="date" id="e_due" value="${dueMode==="date"?esc(it.due):""}" aria-label="日付を指定">
       </div></div>
-      `:`
+      `:isSL?"":`
       <div class="field"><label for="e_genre">ジャンル</label><select id="e_genre"><option value="">なし</option>${gs.map(g=>`<option ${it.genre===g?"selected":""}>${esc(g)}</option>`).join("")}${it.genre&&!gs.includes(it.genre)?`<option selected>${esc(it.genre)}</option>`:""}</select></div>
       <div class="field"><label for="e_url">リンク</label><input id="e_url" type="url" value="${esc(it.url)}" placeholder="https://"></div>`}
-      <div class="field"><label for="e_note">メモ</label><textarea id="e_note" placeholder="補足・経緯など">${esc(it.note)}</textarea></div>
+      ${isSL?"":`<div class="field"><label for="e_note">メモ</label><textarea id="e_note" class="tnote" placeholder="補足・経緯など">${esc(it.note)}</textarea></div>`}
       ${it.box==="vision"?`<label class="sw"><span>ピン留めして常に上に表示</span><input type="checkbox" id="e_pin" ${it.pinned?"checked":""}></label>`:""}
-      <div class="actions"><button class="btn grow" id="e_save">保存</button><button class="btn ghost" data-close2>閉じる</button></div>
-      <div class="actions"><button class="btn danger" id="e_del">削除</button></div>
+      <div class="eacts"><button class="btn" id="e_save">保存</button><button class="btn danger" id="e_del">削除</button></div>
     `, sh => {
       const q = s => sh.querySelector(s);
       const sync = () => {
@@ -1243,12 +1532,59 @@ function editSheet(id, back){
       enterKeys(q("#e_text"), () => q("#e_save").click());
       enterKeys(q("#e_note"), () => q("#e_save").click());
       q("#e_save").onclick = () => { sync(); if(!it.text) return; it.updatedAt = Date.now(); persistItem({...it}); finish(); };
-      q("[data-close2]").onclick = finish;
       q("#e_del").onclick = () => { const bak = {...it0}; removeItem(id); finish(); toast("削除しました", () => { persistItem(bak); rerender(); }); };
     });
   };
   draw();
 }
+
+// ---------- Stock・Log・Vision：メモ帳のような全画面の入力・編集 ----------
+// タイトルは1行。改行（Enter）を押すか、複数行を貼り付けると、2行目からはメモに入る
+const ICON_X = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>';
+function noteEditor(id){
+  if(document.querySelector(".ned")) return;
+  const it0 = id ? S.items.get(id) : null;
+  const box = it0 ? it0.box : S.box;
+  const gs = S.meta.genres[box], cg = curGenre();
+  const genre = it0 ? (it0.genre||"") : (cg && cg!=="__none" ? cg : "");
+  const el = document.createElement("div");
+  el.className = "ned"; el.setAttribute("role","dialog"); el.setAttribute("aria-modal","true"); el.setAttribute("aria-label", it0 ? "編集" : "新しく書く");
+  el.innerHTML = `<div class="ned-in">
+    <div class="ned-bar">${it0 ? `<button type="button" class="ned-del" id="nDel">削除</button>` : `<span></span>`}
+      <div class="ned-r"><button type="button" class="btn ned-save" id="nSave">保存</button><button type="button" class="ned-x" id="nX" aria-label="${it0 ? "保存せずに閉じる" : "入力をやめる"}">${ICON_X}</button></div></div>
+    <input class="ned-title" id="nTitle" placeholder="タイトル" autocomplete="off" enterkeyhint="next" aria-label="タイトル">
+    <div class="ned-meta"><select id="nGenre" aria-label="ジャンル"><option value="">ジャンルなし</option>${gs.map(g=>`<option ${genre===g?"selected":""}>${esc(g)}</option>`).join("")}${genre&&!gs.includes(genre)?`<option selected>${esc(genre)}</option>`:""}</select>
+      <input id="nUrl" type="url" placeholder="リンク（任意）" aria-label="リンク" autocomplete="off"></div>
+    <textarea class="ned-body" id="nBody" placeholder="メモ"></textarea></div>`;
+  document.body.appendChild(el); document.body.classList.add("editing");
+  const T = el.querySelector("#nTitle"), B = el.querySelector("#nBody");
+  T.value = it0 ? it0.text : ""; B.value = it0 ? (it0.note||"") : ""; el.querySelector("#nUrl").value = it0 ? (it0.url||"") : "";
+  // 押した流れのまま入力欄を選ぶ（新しく書くときはキーボードも出る）
+  if(!it0) T.focus();
+  const close = () => { el.remove(); document.body.classList.remove("editing"); render(); };
+  T.addEventListener("keydown", e => { if(e.key==="Enter" && !e.isComposing && e.keyCode!==229){ e.preventDefault(); if(e.metaKey||e.ctrlKey) save(); else { B.focus(); B.setSelectionRange(0,0); } } });
+  T.addEventListener("paste", e => {
+    const t = (e.clipboardData||window.clipboardData)?.getData("text") || ""; if(!/\n/.test(t)) return;
+    e.preventDefault(); const [first, ...rest] = t.replace(/\r/g,"").split("\n");
+    T.setRangeText(first, T.selectionStart, T.selectionEnd, "end"); B.value = rest.join("\n") + (B.value ? "\n"+B.value : "");
+  });
+  B.addEventListener("keydown", e => { if(e.key==="Enter" && (e.metaKey||e.ctrlKey) && !e.isComposing){ e.preventDefault(); save(); } });
+  el.addEventListener("keydown", e => { if(e.key==="Escape"){ e.preventDefault(); close(); } });
+  function save(){
+    let text = T.value.trim(), note = B.value.replace(/\s+$/,"");
+    // タイトルが空でメモだけあるときは、メモの1行目をタイトルにする
+    if(!text && note.trim()){ const lines = note.replace(/^\s+/,"").split("\n"); text = lines.shift().trim(); note = lines.join("\n").replace(/^\n+/,""); }
+    if(!text){ if(it0){ toast("タイトルを入れてください"); T.focus(); } else close(); return; }
+    const g = el.querySelector("#nGenre").value, url = el.querySelector("#nUrl").value.trim() || ((text+" "+note).match(/https?:\/\/\S+/)||[])[0] || "";
+    if(it0) persistItem({...it0, text, note, genre:g, url, updatedAt:Date.now()});
+    else persistItem(newItem(text, {box, note, genre:g, url}));
+    close(); toast(it0 ? "保存しました" : `${BOXES[box].name}に追加しました`);
+  }
+  el.querySelector("#nSave").onclick = save;
+  el.querySelector("#nX").onclick = close;
+  const del = el.querySelector("#nDel"); if(del) del.onclick = () => { const bak = {...it0}; removeItem(it0.id); close(); toast("削除しました", () => { persistItem(bak); rerender(); }); };
+}
+$("#fab").onclick = () => noteEditor(null);
 
 // Vision：押すとメモ（具体の内容）を読む画面。タイトル・ジャンルは「編集」から
 function viewSheet(id){
@@ -1436,8 +1772,8 @@ function rowAction(e, back){
   else if(act==="totomorrow") markTomorrow(it);
   else if(act==="toinbox") toInbox(it);
   else if(act==="sel"){ if(S.sel.has(it.id)) S.sel.delete(it.id); else S.sel.add(it.id); render(); }
-  else if(act==="edit") editSheet(it.id, back);
-  else if(act==="view") viewSheet(it.id);
+  else if(act==="edit") it.box==="task" ? editSheet(it.id, back) : noteEditor(it.id);
+  else if(act==="view") noteEditor(it.id);
   else if(act==="pin"){ persistItem({...it, pinned:!it.pinned, updatedAt:Date.now()}); rerender(); }
   else if(act==="up"||act==="down"){
     const sib = openTasks().filter(i=>i.projectId===it.projectId).sort((a,b)=>a.order-b.order);
@@ -1450,7 +1786,7 @@ function rowAction(e, back){
   return true;
 }
 
-document.querySelectorAll(".tab").forEach(t => t.onclick = () => { S.box = t.dataset.b; S.screen = "main"; S.genre = null; S.search = ""; saveUi(); render(); window.scrollTo({top:0}); });
+document.querySelectorAll(".tab").forEach(t => t.onclick = () => { S.selecting = false; S.sel.clear(); S.box = t.dataset.b; S.screen = "main"; S.genre = null; S.search = ""; saveUi(); render(); window.scrollTo({top:0}); });
 $("#btnDone").onclick = () => { S.screen = S.screen==="done" ? "main" : "done"; render(); window.scrollTo({top:0}); };
 
 // ---------- まとめて選択 ----------
@@ -1468,8 +1804,42 @@ function applyBulk(fn, msg){
   S.selecting = false; S.sel.clear(); closeSheet(); rerender();
   toast(`${prevs.length}件を${msg}`, () => { prevs.forEach(p=>persistItem(p)); rerender(); });
 }
-$("#selDone").onclick = () => { if(!S.sel.size) return; const now = Date.now(); applyBulk(x => ({...x, status:"done", doneAt:now, doneDay:today()}), "完了にしました"); };
-$("#selEdit").onclick = bulkSheet;
+$("#selDone").onclick = () => { if(!S.sel.size) return;
+  if(S.box!=="task"){
+    const prevs = [...S.sel].map(id=>S.items.get(id)).filter(Boolean).map(x=>({...x}));
+    prevs.forEach(p => removeItem(p.id)); S.selecting = false; S.sel.clear(); rerender();
+    toast(`${prevs.length}件を削除しました`, () => { prevs.forEach(p=>persistItem(p)); rerender(); });
+    return;
+  }
+  const now = Date.now(); applyBulk(x => ({...x, status:"done", doneAt:now, doneDay:today()}), "完了にしました"); };
+$("#selEdit").onclick = () => S.box==="task" ? bulkSheet() : bulkNoteSheet();
+// Stock・Log・Vision のまとめて変更：ジャンルの変更と、別の箱への移動
+function bulkNoteSheet(){
+  if(!S.sel.size) return;
+  const box = S.box; let to = box;
+  const draw = () => {
+    const gs = S.meta.genres[to];
+    const keepLabel = to===box ? "変更しない" : to==="task" ? `「${taskDef()}」` : "ジャンルなし";
+    openSheet(`<h2>まとめて変更<em>${S.sel.size}件を選択中</em></h2>
+      <div class="field"><span class="lab">移す先</span><div class="seg">${["stock","log","vision","task"].map(b=>`<button data-to="${b}" aria-pressed="${to===b}">${BOXES[b].name}${b===box?"（今）":""}</button>`).join("")}</div></div>
+      <div class="field"><label for="bn_genre">ジャンル</label><select id="bn_genre"><option value="__keep">${keepLabel}</option>${gs.map(g=>`<option>${esc(g)}</option>`).join("")}</select></div>
+      <div class="actions"><button class="btn grow" id="bn_apply">変更する</button><button class="btn ghost" data-close2>閉じる</button></div>`, sh => {
+      const q = s => sh.querySelector(s);
+      q("[data-close2]").onclick = closeSheet;
+      sh.querySelectorAll("[data-to]").forEach(b => b.onclick = () => { to = b.dataset.to; draw(); });
+      q("#bn_apply").onclick = () => {
+        const g = q("#bn_genre").value;
+        if(to===box && g==="__keep"){ toast("変更する項目を選んでください"); return; }
+        applyBulk(x => {
+          if(to!==x.box){ x.box = to; x.genre = g==="__keep" ? (to==="task" ? taskDef() : "") : g; if(to==="task") x.status = "open"; }
+          else if(g!=="__keep") x.genre = g;
+          return x;
+        }, to===box ? "変更しました" : `${BOXES[to].name}に移しました`);
+      };
+    }, null);
+  };
+  draw();
+}
 // マルチタスクに、既存のタスクを選んで入れる
 function pickSheet(name, back){
   const chosen = new Set(); let q = "";
@@ -1531,6 +1901,38 @@ function bulkSheet(){
   draw();
 }
 $("#btnImport").onclick = importSheet;
+$("#btnMore").onclick = () => openSheet(`<h2>そのほか</h2>
+  <div class="actions"><button class="btn ghost grow" id="mDone">集計（成し遂げたこと）</button></div>
+  <div class="actions"><button class="btn ghost grow" id="mExport">データとアカウント（書き出し）</button></div>
+  <div class="actions"><button class="btn ghost grow" id="mImport">まとめて取り込む</button></div>
+  <div class="actions"><button class="btn ghost grow" data-close2>閉じる</button></div>`, sh => {
+  sh.querySelector("[data-close2]").onclick = closeSheet;
+  sh.querySelector("#mExport").onclick = exportSheet;
+  sh.querySelector("#mDone").onclick = () => { closeSheet(); S.selecting = false; S.sel.clear(); S.screen = "done"; render(); window.scrollTo({top:0}); };
+  sh.querySelector("#mImport").onclick = importSheet;
+});
+// ⑤ 入力欄：入力中（または書きかけ）のときだけフォルダ欄を出す。指を離す前に閉じないよう少し待つ
+(() => {
+  const comp = $("#composer");
+  const sync = () => {
+    const f = comp.contains(document.activeElement);
+    document.body.classList.toggle("typing", f);
+    comp.classList.toggle("open", f || !!$("#q").value.trim() || !!$("#qPerson").value.trim());
+  };
+  comp.addEventListener("focusin", sync);
+  comp.addEventListener("focusout", () => setTimeout(sync, 250));
+  $("#q").addEventListener("input", sync);
+})();
+// スマホのキーボード：見えている範囲（visualViewport）からキーボードの高さを出し、入力欄とシートをその上に置く
+(() => {
+  const vv = window.visualViewport; if(!vv) return;
+  const upd = () => {
+    const kb = Math.max(0, Math.round(innerHeight - vv.height - vv.offsetTop));
+    document.documentElement.style.setProperty("--kb", kb + "px");
+    document.body.classList.toggle("kbup", kb > 80);
+  };
+  vv.addEventListener("resize", upd); vv.addEventListener("scroll", upd); addEventListener("resize", upd); upd();
+})();
 $("#btnExport").onclick = exportSheet;
 
 // ---------- 書き出し（バックアップ・PWAへの移行用） ----------
@@ -1643,6 +2045,7 @@ $("#main").addEventListener("click", e => {
   const mf = e.target.closest("[data-mfolder]"); if(mf){ personSheet(mf.dataset.mfolder); return; }
   const a = e.target.closest("[data-act]");
   if(a && a.dataset.act==="genres") return genresSheet();
+  if(a && a.dataset.act==="closedone"){ S.screen = "main"; render(); window.scrollTo({top:0}); return; }
   if(a && a.dataset.act==="migrate") return importDataSheet();
   if(a && a.dataset.act==="pjback"){ S.pjOpen = null; return render(); }
   if(a && a.dataset.act==="pjdelete"){

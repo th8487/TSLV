@@ -1,6 +1,6 @@
 // TSLV service worker
 // 更新したときは VERSION の数字を上げる（古いキャッシュが消えて新しい版に切り替わる）
-const VERSION = "tslv-v6";
+const VERSION = "tslv-v7";
 const CORE = [
   "./", "./index.html", "./kakeibo.html", "./manifest.webmanifest",
   "./firebase-app.js", "./firebase-auth.js", "./firebase-firestore.js",
