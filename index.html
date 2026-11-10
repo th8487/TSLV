@@ -495,7 +495,6 @@ body.typing.kbup .dock{padding-bottom:6px}
 /* 2. 入力欄を押した瞬間はキーボードに隠れない位置に置き（ページの引き上げを防ぐ）、キーボードが出たら下からせり出す */
 /* 2. 入力中：iPhoneが入力欄をキーボードの上へ持ち上げる動きはそのまま使い、背景は隠して「動いて見えない」ようにする。
       入力欄（タイトル）を一番下に置き、フォルダ・今日/未定はその上に並べる（キーボードの上に全部見える並び） */
-body.typing .wrap{visibility:hidden}
 body.typing .composer .c2{order:1}
 body.typing .composer .c1{order:2}
 /* ===== /追加修正 ===== */
@@ -624,6 +623,30 @@ body.editing{overflow:hidden}
 .rv-left .row.picked .txt{color:var(--ink)}
 .rv-left .selbox{width:20px;height:20px}
 .rv-acts{position:sticky;bottom:calc(-20px - env(safe-area-inset-bottom,0px));background:var(--surface);padding:10px 0 4px;display:flex;flex-direction:column;gap:8px}
+/* ===== v8 ===== */
+/* #1 シートの中の一覧：区切り線の左余白をシートの一覧の色で塗る（グレーの四角が出ないように） */
+.apple .sheet .row+.row{box-shadow:inset 52px 1px 0 0 var(--bg),inset 0 1px 0 var(--line)}
+.apple .sheet .row+.row.overdue{box-shadow:inset 3px 0 0 var(--danger),inset 52px 1px 0 var(--bg),inset 0 1px 0 var(--line)}
+/* #5 メモ帳風の入力：見えている範囲（キーボードの上）にぴったり合わせる */
+.ned{top:var(--vvt,0px);bottom:auto;height:var(--vvh,100%);animation:none}
+html.editing,body.editing{overflow:hidden;overscroll-behavior:none}
+/* #4 今日やる：フォルダは畳まずに、左の色の帯とフォルダ名でまとめて見せる */
+.fstack{display:flex;flex-direction:column;gap:10px}
+.list.fg{position:relative}
+.list.fg::before{content:"";position:absolute;left:0;top:0;bottom:0;width:5px;background:var(--gc);z-index:3;pointer-events:none}
+.fgl{display:flex;align-items:center;gap:2px;padding:8px 16px 0 18px;font-size:12px;font-weight:600;color:var(--gc);cursor:pointer;-webkit-user-select:none;user-select:none}
+.fgl svg{width:11px;height:11px;opacity:.7}
+.fgl.unnamed{color:var(--muted)}
+.fstack .row.t{-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
+.row.td-drag{opacity:.45}
+.row.td-into{background:color-mix(in srgb,var(--accent) 18%,var(--surface))!important}
+.row.td-before{box-shadow:inset 0 3px 0 var(--accent)!important}
+.row.td-after{box-shadow:inset 0 -3px 0 var(--accent)!important}
+.tdghost{position:fixed;left:0;top:0;z-index:90;max-width:70vw;padding:9px 14px;border-radius:12px;background:var(--surface);color:var(--ink);font-size:15px;box-shadow:0 10px 30px rgb(0 0 0 / .3);pointer-events:none;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;border:1px solid var(--accent)}
+/* #3 今日やる → マルチタスクへ（▶） */
+.mini.tm{color:var(--accent)}
+.mini.tm svg{width:13px;height:13px}
+/* ===== /v8 ===== */
 /* ===== /v7 ===== */
 @media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
 </style>
@@ -959,7 +982,7 @@ const inMultiTask = i => (S.meta.multi||[]).some(e=>e.kind==="task" && e.id===i.
 function inView(i, v){
   if(i.box!=="task" || isDone(i)) return false;
   switch(v){
-    case "today": return isToday(i) || followLate(i) || inMultiTask(i);
+    case "today": return (isToday(i) || followLate(i)) && !inMultiTask(i);
     case "inbox": return !i.wait && !i.projectId && !(i.due && i.due <= today()) && !inMultiTask(i);
     case "wait":  return !!i.wait;
   }
@@ -1010,7 +1033,7 @@ function reRequest(it){
   toast("追いかけました。3日後にまた確認します", () => { persistItem(prev); rerender(); });
 }
 function unwait(it){ persistItem({...it, wait:false, followUp:"", chase:0, updatedAt:Date.now()}); rerender(); toast("受信箱に戻しました"); }
-function persons(){ return [...new Set(ofBox("task").map(i=>i.person).filter(Boolean))]; }
+function persons(genre){ return [...new Set(ofBox("task").filter(i=>!genre || (i.genre||taskDef())===genre).map(i=>i.person).filter(Boolean))].sort(byName); }
 
 // ---------- render ----------
 function rerender(){ render(); refreshSheet(); }
@@ -1045,7 +1068,9 @@ function render(){
   document.querySelector(".tabs").hidden = S.selecting;
   $("#q").placeholder = pjList ? ({task:"同時に進めるタスク", folder:"新しいフォルダ名（人の名前など）", project:"新しいプロジェクト名"})[S.multiKind] : S.box==="task" ? (S.view==="wait" ? "依頼したこと（確認日は3日後）" : "タイトル") : `${BOXES[S.box].name} に1行で書き留める`;
   document.querySelectorAll("[data-due]").forEach(b=>b.setAttribute("aria-pressed", String(b.dataset.due===S.newDue)));
-  $("#persons").innerHTML = persons().map(p=>`<option value="${esc(p)}">`).join("");
+  // 追加するタスクが入るジャンル（受信箱なら選んでいるジャンル、それ以外は既定のジャンル）のフォルダだけを候補に出す
+  const cgF = curGenre();
+  $("#persons").innerHTML = persons(S.box==="task" ? (cgF && cgF!=="__none" ? cgF : taskDef()) : null).map(p=>`<option value="${esc(p)}">`).join("");
   const banner = (S.mode==="db" && S.loaded && S.items.size===0) ? `<div class="migrate"><b>以前のTSLVからデータを移しますか？</b><span class="note">Claude上のTSLVで「書き出し」→「コピー」した内容を貼り付けると、そのまま引き継げます。</span><button class="btn" data-act="migrate">データを読み込む</button></div>` : "";
   $("#main").innerHTML = banner + (S.screen==="done" ? renderDone() : (S.box==="task" ? renderTask() : renderNote()));
   setTimeout(maybeReview, 0);
@@ -1148,6 +1173,26 @@ function rowGroup(person, list){
 function section(title, inner, right=""){
   return `<section class="section"><div class="sh"><h3>${esc(title)}</h3><span>${esc(right)}</span></div><div class="list">${inner}</div></section>`;
 }
+// 今日やる：フォルダは畳まず、同じフォルダのタスクを1つのかたまり（左に色の帯）にして並べる
+function folderStack(list, opts={}){
+  const segs = [], at = new Map();
+  for(const i of list){
+    if(i.person){ if(at.has(i.person)) segs[at.get(i.person)].items.push(i); else { at.set(i.person, segs.length); segs.push({p:i.person, items:[i]}); } }
+    else { const l = segs.at(-1); if(l && !l.p) l.items.push(i); else segs.push({p:"", items:[i]}); }
+  }
+  let k = 0;
+  return segs.map(sg => sg.p
+    ? `<div class="list fg" style="--gc:${FOLDER_COLORS[(k++) % FOLDER_COLORS.length]}"><div class="fgl${/^未設定\d*$/.test(sg.p)?" unnamed":""}" data-fopen="${esc(sg.p)}" role="button" tabindex="0" aria-label="フォルダ「${esc(sg.p)}」を開く"><span>${esc(sg.p)}</span>${ICON.chev}</div>${sg.items.map(i=>rowTask(i,{...opts, hidePerson:true})).join("")}</div>`
+    : `<div class="list">${sg.items.map(i=>rowTask(i,opts)).join("")}</div>`).join("");
+}
+// 並んでいる順に色を変えて、となり合うフォルダが同じ色にならないようにする
+const FOLDER_COLORS = ["var(--log)","var(--vision)","var(--stock)","var(--task)","#FF2D55","#5AC8FA","#A2845E"];
+function sectionF(title, list, right, opts){
+  if(S.selecting) return section(title, grouped(list), right);
+  return `<section class="section"><div class="sh"><h3>${esc(title)}</h3><span>${esc(right)}</span></div><div class="fstack">${folderStack(list, opts)}</div></section>`;
+}
+// 長押しでまとめたときの仮の名前（未設定、未設定2…）
+function newUnnamed(){ const used = new Set(ofBox("task").map(i=>i.person)); if(!used.has("未設定")) return "未設定"; let n = 2; while(used.has("未設定"+n)) n++; return "未設定"+n; }
 const emptyBox = (t, s) => `<div class="section empty"><b>${esc(t)}</b>${esc(s)}</div>`;
 
 function renderTask(){
@@ -1165,10 +1210,10 @@ function renderTask(){
     const late = list.filter(i=>(i.due && i.due<today()) || (followLate(i) && !(i.due===today()))).sort(byDue);
     const now = list.filter(i=>!late.includes(i)).sort((a,b)=>a.order-b.order);
     const doneToday = filterGenre(ofBox("task").filter(i=>isDone(i) && i.doneDay===today())).sort((a,b)=>b.doneAt-a.doneAt);
-    if(late.length) html += section("要確認", grouped(late), `${late.length}件`);
-    html += now.length ? section("今日やる", grouped(now), `${now.length}件`) : (late.length ? "" : emptyBox("今日やることはまだありません","受信箱の「今日やる」を押すとここに入ります。下の入力欄から追加もできます"));
-    const next = filterGenre(open.filter(i=>!i.wait && i.due===tomorrow()));
-    if(next.length) html += section("明日やる", grouped(next), `${next.length}件`);
+    if(late.length) html += sectionF("要確認", late, `${late.length}件`, {tm:true});
+    html += now.length ? sectionF("今日やる", now, `${now.length}件`, {tm:true}) : (late.length ? "" : emptyBox("今日やることはまだありません","受信箱の「今日やる」を押すとここに入ります。下の入力欄から追加もできます"));
+    const next = filterGenre(open.filter(i=>!i.wait && i.due===tomorrow() && !inMultiTask(i))).sort((a,b)=>a.order-b.order);
+    if(next.length) html += sectionF("明日やる", next, `${next.length}件`, {});
     if(doneToday.length && !S.selecting) html += section("今日終わったこと", doneToday.map(i=>rowTask(i)).join(""), `${doneToday.length}件`);
   } else if(S.view==="inbox"){
     html += list.length ? section(curGenre()||"受信箱", grouped(list), `${list.length}件`) : emptyBox("このジャンルの受信箱は空です","思いついたらまずここへ。「今日やる」か「依頼完了」を押すと振り分けられます");
@@ -1224,7 +1269,8 @@ function rowTask(i, opts={}){
     <div class="body" data-act="edit"><div class="txt">${esc(i.text)}</div>${meta.length?`<div class="meta">${meta.join("")}</div>`:""}</div>
     ${opts.inPj && !isDone(i) ? `<div class="order"><button class="mini" data-act="up" aria-label="上へ">${ICON.up}</button><button class="mini" data-act="down" aria-label="下へ">${ICON.down}</button></div>` : ""}
     ${SW ? "" : dueBtn}
-    ${opts.multi ? `<button class="mini" data-act="unmulti" aria-label="後でやる（受信箱に戻す）" title="後でやる（受信箱に戻す）">✕</button>` : ""}
+    ${opts.multi ? `<button class="mini" data-act="unmulti" aria-label="今日やるに戻す" title="今日やるに戻す">✕</button>` : ""}
+    ${opts.tm && !isDone(i) && !i.wait && !S.selecting ? `<button class="mini tm" data-act="tomulti" aria-label="マルチタスクへ移す" title="マルチタスクへ"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7.5 4.8v14.4L19 12z" fill="currentColor"/></svg></button>` : ""}
   ${SW?`</div><div class="ra">${dueBtn}</div>`:""}</div>`;
 }
 
@@ -1354,6 +1400,67 @@ function mdEnd(){
   // 並べ替え直後のタップ（項目を開く）を無視する
   main.addEventListener("click", e => { if(MD.justDragged){ e.stopPropagation(); e.preventDefault(); } }, true);
   main.addEventListener("contextmenu", e => { if(e.target.closest("#mlist .mi")) e.preventDefault(); });
+})();
+
+// ---------- 今日やる：長押しで持ち上げ、ほかのタスクに重ねて離すとフォルダにまとまる ----------
+const TD = {timer:null, on:false, row:null, id:"", sec:null, x0:0, y0:0, target:null, mode:"", just:false, ghost:null};
+function tdClear(){ document.querySelectorAll(".td-into,.td-before,.td-after").forEach(r=>r.classList.remove("td-into","td-before","td-after")); }
+function tdPos(x, y){ if(TD.ghost) TD.ghost.style.transform = `translate(${Math.max(8, Math.min(x-40, innerWidth-120))}px,${y-46}px)`; }
+function tdStart(row, x, y){
+  TD.row = row; TD.id = row.dataset.id; TD.sec = row.closest(".section"); TD.x0 = x; TD.y0 = y;
+  clearTimeout(TD.timer);
+  TD.timer = setTimeout(() => {
+    TD.on = true; row.classList.add("td-drag"); document.body.classList.add("mdragging");
+    const g = document.createElement("div"); g.className = "tdghost"; g.textContent = S.items.get(TD.id)?.text || ""; document.body.appendChild(g); TD.ghost = g; tdPos(x, y);
+    try{ navigator.vibrate && navigator.vibrate(15); }catch(e){}
+  }, 400);
+}
+function tdMove(x, y){
+  if(!TD.row) return false;
+  if(!TD.on){ if(Math.abs(x-TD.x0) > 8 || Math.abs(y-TD.y0) > 8){ clearTimeout(TD.timer); TD.row = null; } return false; }
+  tdPos(x, y); tdClear(); TD.target = null; TD.mode = "";
+  const el = document.elementFromPoint(x, y), r = el && el.closest(".fstack .row.t[data-id]");
+  if(r && r!==TD.row && r.closest(".section")===TD.sec){
+    const b = r.getBoundingClientRect(), rel = (y - b.top) / b.height;
+    TD.mode = rel < .28 ? "before" : rel > .72 ? "after" : "into"; TD.target = r; r.classList.add("td-"+TD.mode);
+  }
+  if(y < 90) scrollBy(0, -10); else if(y > innerHeight - 170) scrollBy(0, 10);
+  return true;
+}
+function tdEnd(){
+  clearTimeout(TD.timer);
+  if(!TD.row) return;
+  const was = TD.on, row = TD.row, t = TD.target, mode = TD.mode;
+  TD.on = false; TD.row = null; TD.target = null;
+  row.classList.remove("td-drag"); document.body.classList.remove("mdragging"); tdClear();
+  if(TD.ghost){ TD.ghost.remove(); TD.ghost = null; }
+  if(!was) return;
+  TD.just = true; setTimeout(() => { TD.just = false; }, 350);
+  if(!t) return;
+  const mv = S.items.get(TD.id), tg = S.items.get(t.dataset.id); if(!mv || !tg) return;
+  const prev = [{...mv}, {...tg}], now = Date.now(), undo = () => { prev.forEach(x=>persistItem(x)); rerender(); };
+  if(mode==="into"){
+    const name = tg.person || newUnnamed();
+    if(!tg.person) persistItem({...tg, person:name, updatedAt:now});
+    persistItem({...mv, person:name, order:tg.order + .001, updatedAt:now});
+    toast(tg.person ? `「${name}」にまとめました` : "フォルダにまとめました（名前は未設定）", undo);
+  } else {
+    persistItem({...mv, person:tg.person||"", order:tg.order + (mode==="before" ? -.001 : .001), updatedAt:now});
+    toast(mv.person && mv.person!==tg.person ? `「${mv.person}」から外しました` : "並べ替えました", undo);
+  }
+  rerender();
+}
+(() => {
+  const main = $("#main");
+  const ok = t => !t.closest("button,a,input,textarea,select,.fgl");
+  main.addEventListener("touchstart", e => { if(S.selecting || e.touches.length>1) return; const r = e.target.closest(".fstack .row.t[data-id]"); if(!r || !ok(e.target) || r.classList.contains("done")) return; const t = e.touches[0]; tdStart(r, t.clientX, t.clientY); }, {passive:true});
+  document.addEventListener("touchmove", e => { if(!TD.row) return; const t = e.touches[0]; if(tdMove(t.clientX, t.clientY)) e.preventDefault(); }, {passive:false});
+  document.addEventListener("touchend", tdEnd); document.addEventListener("touchcancel", tdEnd);
+  main.addEventListener("mousedown", e => { if(e.button!==0 || S.selecting) return; const r = e.target.closest(".fstack .row.t[data-id]"); if(!r || !ok(e.target) || r.classList.contains("done")) return; tdStart(r, e.clientX, e.clientY); });
+  document.addEventListener("mousemove", e => { if(TD.row && tdMove(e.clientX, e.clientY)) e.preventDefault(); });
+  document.addEventListener("mouseup", tdEnd);
+  main.addEventListener("click", e => { if(TD.just){ e.stopPropagation(); e.preventDefault(); } }, true);
+  main.addEventListener("contextmenu", e => { if(e.target.closest(".fstack .row.t")) e.preventDefault(); });
 })();
 
 function renderNote(){
@@ -1503,7 +1610,7 @@ function editSheet(id, back){
       <div class="mini2"><select id="e_genre" aria-label="ジャンル"><option value="">ジャンルなし</option>${gs.map(g=>`<option ${it.genre===g?"selected":""}>${esc(g)}</option>`).join("")}${it.genre&&!gs.includes(it.genre)?`<option selected>${esc(it.genre)}</option>`:""}</select><input id="e_url" type="url" value="${esc(it.url)}" placeholder="リンク（https://）" aria-label="リンク"></div>`:""}
       ${isT?`
       <div class="grid2">
-        <div class="field"><label for="e_person">フォルダ</label><input id="e_person" value="${esc(it.person)}" placeholder="任意" list="persons"></div>
+        <div class="field"><label for="e_person">フォルダ</label><input id="e_person" value="${esc(it.person)}" placeholder="任意" list="persons_e" autocomplete="off"><datalist id="persons_e">${persons(it.genre||taskDef()).map(p=>`<option value="${esc(p)}">`).join("")}</datalist></div>
         <div class="field"><label for="e_genre">ジャンル</label><select id="e_genre">${gs.map(g=>`<option ${it.genre===g?"selected":""}>${esc(g)}</option>`).join("")}${it.genre&&!gs.includes(it.genre)?`<option selected>${esc(it.genre)}</option>`:""}</select></div>
       </div>
       <div class="field"><span class="lab">納期</span><div class="seg">
@@ -1556,12 +1663,12 @@ function noteEditor(id){
     <div class="ned-meta"><select id="nGenre" aria-label="ジャンル"><option value="">ジャンルなし</option>${gs.map(g=>`<option ${genre===g?"selected":""}>${esc(g)}</option>`).join("")}${genre&&!gs.includes(genre)?`<option selected>${esc(genre)}</option>`:""}</select>
       <input id="nUrl" type="url" placeholder="リンク（任意）" aria-label="リンク" autocomplete="off"></div>
     <textarea class="ned-body" id="nBody" placeholder="メモ"></textarea></div>`;
-  document.body.appendChild(el); document.body.classList.add("editing");
+  document.body.appendChild(el); document.body.classList.add("editing"); document.documentElement.classList.add("editing");
   const T = el.querySelector("#nTitle"), B = el.querySelector("#nBody");
   T.value = it0 ? it0.text : ""; B.value = it0 ? (it0.note||"") : ""; el.querySelector("#nUrl").value = it0 ? (it0.url||"") : "";
   // 押した流れのまま入力欄を選ぶ（新しく書くときはキーボードも出る）
   if(!it0) T.focus();
-  const close = () => { el.remove(); document.body.classList.remove("editing"); render(); };
+  const close = () => { el.remove(); document.body.classList.remove("editing"); document.documentElement.classList.remove("editing"); render(); };
   T.addEventListener("keydown", e => { if(e.key==="Enter" && !e.isComposing && e.keyCode!==229){ e.preventDefault(); if(e.metaKey||e.ctrlKey) save(); else { B.focus(); B.setSelectionRange(0,0); } } });
   T.addEventListener("paste", e => {
     const t = (e.clipboardData||window.clipboardData)?.getData("text") || ""; if(!/\n/.test(t)) return;
@@ -1765,10 +1872,15 @@ function rowAction(e, back){
   else if(act==="unwait") unwait(it);
   else if(act==="rereq") reRequest(it);
   else if(act==="unmulti"){
-    // ✕＝後でやる：マルチタスクから外し、受信箱に戻す
+    // ✕：マルチタスクから外し、今日やるに戻す
     const M = S.meta.multi, k = M.findIndex(e=>e.kind==="task" && e.id===it.id);
-    if(k>=0){ const e = M.splice(k,1)[0], prev = {...it}; cleanGroups(); persistMeta(); persistItem({...it, due:"", updatedAt:Date.now()}); rerender();
-      toast("後でやる：受信箱に戻しました", () => { S.meta.multi.splice(k,0,e); persistMeta(); persistItem(prev); rerender(); }); } }
+    if(k>=0){ const e = M.splice(k,1)[0], prev = {...it}; cleanGroups(); persistMeta(); persistItem({...it, due:(it.due && it.due<=today()) ? it.due : today(), wait:false, updatedAt:Date.now()}); rerender();
+      toast("今日やるに戻しました", () => { S.meta.multi.splice(k,0,e); persistMeta(); persistItem(prev); rerender(); }); } }
+  else if(act==="tomulti"){
+    // ▶：今日やるからマルチタスクへ
+    const M = S.meta.multi || (S.meta.multi = []);
+    if(!M.some(e=>e.kind==="task" && e.id===it.id)){ M.push({kind:"task", id:it.id}); persistMeta(); rerender();
+      toast("マルチタスクに移しました", () => { const k = S.meta.multi.findIndex(e=>e.kind==="task" && e.id===it.id); if(k>=0) S.meta.multi.splice(k,1); persistMeta(); rerender(); }); } }
   else if(act==="totomorrow") markTomorrow(it);
   else if(act==="toinbox") toInbox(it);
   else if(act==="sel"){ if(S.sel.has(it.id)) S.sel.delete(it.id); else S.sel.add(it.id); render(); }
@@ -1926,12 +2038,19 @@ $("#btnMore").onclick = () => openSheet(`<h2>そのほか</h2>
 // スマホのキーボード：見えている範囲（visualViewport）からキーボードの高さを出し、入力欄とシートをその上に置く
 (() => {
   const vv = window.visualViewport; if(!vv) return;
+  // スクロール中にキーボード扱いの高さが出て下のバーが動かないよう、入力欄を触っているときだけ計算する
+  const editing = () => { const a = document.activeElement; return !!a && a.matches("input:not([type=checkbox]):not([type=radio]):not([type=button]),textarea,select,[contenteditable=true]"); };
   const upd = () => {
-    const kb = Math.max(0, Math.round(innerHeight - vv.height - vv.offsetTop));
-    document.documentElement.style.setProperty("--kb", kb + "px");
+    const root = document.documentElement.style;
+    let kb = editing() ? Math.max(0, Math.round(innerHeight - vv.height - vv.offsetTop)) : 0;
+    if(kb < 60) kb = 0;
+    root.setProperty("--kb", kb + "px");
+    root.setProperty("--vvt", Math.round(vv.offsetTop) + "px");
+    root.setProperty("--vvh", Math.round(vv.height) + "px");
     document.body.classList.toggle("kbup", kb > 80);
   };
-  vv.addEventListener("resize", upd); vv.addEventListener("scroll", upd); addEventListener("resize", upd); upd();
+  vv.addEventListener("resize", upd); vv.addEventListener("scroll", upd); addEventListener("resize", upd);
+  document.addEventListener("focusin", upd); document.addEventListener("focusout", () => setTimeout(upd, 60)); upd();
 })();
 $("#btnExport").onclick = exportSheet;
 
@@ -2012,7 +2131,7 @@ $("#composer").onsubmit = e => {
     const M = S.meta.multi;
     if(S.multiKind==="task"){
       const it = newItem(text, {box:"task"}); persistItem(it); M.push({kind:"task", id:it.id}); persistMeta();
-      toast("マルチタスクに追加しました（今日やる扱い）");
+      toast("マルチタスクに追加しました");
     } else {
       const name = text.replace(/\s+/g," ").trim();
       if(S.multiKind==="project") S.meta.folderModes[name] = "project"; else delete S.meta.folderModes[name];
@@ -2043,6 +2162,7 @@ $("#main").addEventListener("click", e => {
   const g = e.target.closest("[data-genre]"); if(g){ if(S.box==="task" && S.view==="inbox") S.inboxGenre = g.dataset.genre; else if(S.box!=="task") S.noteGenre[S.box] = g.dataset.genre; else S.genre = g.dataset.genre || null; render(); return; }
   const um = e.target.closest("[data-unmf]"); if(um){ const n = um.dataset.unmf, M = S.meta.multi, k = M.findIndex(x=>x.kind==="folder" && x.name===n); if(k>=0){ const x = M.splice(k,1)[0]; cleanGroups(); persistMeta(); render(); toast(`「${n}」をマルチタスクから外しました`, () => { S.meta.multi.splice(k,0,x); persistMeta(); render(); }); } return; }
   const mf = e.target.closest("[data-mfolder]"); if(mf){ personSheet(mf.dataset.mfolder); return; }
+  const fo = e.target.closest("[data-fopen]"); if(fo){ personSheet(fo.dataset.fopen); return; }
   const a = e.target.closest("[data-act]");
   if(a && a.dataset.act==="genres") return genresSheet();
   if(a && a.dataset.act==="closedone"){ S.screen = "main"; render(); window.scrollTo({top:0}); return; }
